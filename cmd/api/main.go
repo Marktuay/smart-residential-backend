@@ -29,6 +29,18 @@ func main() {
 	// Auditoría
 	mux.Handle("GET /api/v1/audit-logs", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarLogsHandler))))
 
+	// Dashboard
+	mux.Handle("GET /api/v1/dashboard/stats", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerEstadisticasHandler))))
+
+	// Rondas
+	mux.Handle("GET /api/v1/rondas/programas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ListarProgramasRondasHandler))))
+	mux.Handle("POST /api/v1/rondas/programas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin)(http.HandlerFunc(handler.CrearProgramaRondaHandler))))
+	mux.Handle("GET /api/v1/rondas/asignaciones", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ListarAsignacionesRondasHandler))))
+
+	// Geolocalización
+	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
+	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
+
 	// Envolver todo el enrutador con el middleware CORS
 	handlerConCORS := middleware.CorsMiddleware(mux)
 

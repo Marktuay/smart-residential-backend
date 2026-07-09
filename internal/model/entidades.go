@@ -58,3 +58,52 @@ type LoginResponse struct {
 	ResidencialID string `json:"residencial_id"`
 	Rol           Role   `json:"rol"`
 }
+
+type PuntoQR struct {
+	ID            int64   `json:"id"`
+	ResidencialID string  `json:"residencial_id"`
+	Nombre        string  `json:"nombre"`
+	CodigoQR      string  `json:"codigo_qr"`
+	Latitud       float64 `json:"latitud"`
+	Longitud      float64 `json:"longitud"`
+}
+
+type ProgramaRonda struct {
+	ID            int64  `json:"id"`
+	ResidencialID string `json:"residencial_id"`
+	Nombre        string `json:"nombre"`
+	HoraInicio    string `json:"hora_inicio"`
+	HoraFin       string `json:"hora_fin"`
+	Recurrencia   string `json:"recurrencia"`
+}
+
+type AsignacionRonda struct {
+	ID            int64  `json:"id"`
+	ResidencialID string `json:"residencial_id"`
+	ProgramaID    int64  `json:"programa_id"`
+	UsuarioID     int64  `json:"usuario_id"`
+	Fecha         string `json:"fecha"`
+	Estado        string `json:"estado"`
+}
+
+type Visita struct {
+	ID              int64      `json:"id"`
+	ResidencialID   string     `json:"residencial_id"`
+	NombreVisitante string     `json:"nombre_visitante"`
+	Estado          string     `json:"estado"`
+	FechaEsperada   string     `json:"fecha_esperada"`
+	FechaIngreso    *time.Time `json:"fecha_ingreso,omitempty"`
+}
+
+type DashboardStats struct {
+	Activos         int `json:"activos"`
+	Criticos        int `json:"criticos"`
+	ResueltosHoy    int `json:"resueltos_hoy"`
+	TotalHistorico  int `json:"total_historico"`
+	RondasHoy       int `json:"rondas_hoy"`
+	VisitasHoy      int `json:"visitas_hoy"`
+	Complejos       int `json:"complejos"`
+	CasasQR         int `json:"casas_qr"`
+	Residentes      int `json:"residentes"`
+	UsuariosActivos int `json:"usuarios_activos"`
+}
