@@ -26,3 +26,42 @@ func ObtenerUsuarioPorEmail(ctx context.Context, email string) (*model.Usuario, 
 
 	return &u, nil
 }
+
+// ListarUsuarios obtiene todos los usuarios de un residencial
+func ListarUsuarios(residencialID string) ([]model.Usuario, error) {
+	query := `SELECT id, residencial_id, email, rol, creado_en 
+			  FROM usuarios 
+			  WHERE residencial_id = $1 
+			  ORDER BY creado_en DESC`
+
+	rows, err := db.DB.Query(query, residencialID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var usuarios []model.Usuario
+	for rows.Next() {
+		var u model.Usuario
+		if err := rows.Scan(&u.ID, &u.ResidencialID, &u.Email, &u.Rol, &u.CreadoEn); err != nil {
+			return nil, err
+		}
+		usuarios = append(usuarios, u)
+	}
+	return usuarios, nil
+}
+
+// CrearUsuario inserta un nuevo usuario en la base de datos
+func CrearUsuario(usuario *model.Usuario) error {
+	query := `INSERT INTO usuarios (residencial_id, email, password_hash, rol) 
+			  VALUES ($1, $2, $3, $4) RETURNING id, creado_en`
+	
+	err := db.DB.QueryRow(query,
+		usuario.ResidencialID,
+		usuario.Email,
+		usuario.PasswordHash,
+		usuario.Rol,
+	).Scan(&usuario.ID, &usuario.CreadoEn)
+
+	return err
+}

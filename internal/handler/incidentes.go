@@ -2,59 +2,75 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
 	"smart-residential-backend/internal/repository"
-	"time"
+	"strconv"
 )
 
-// ListarIncidentesHandler maneja la petición GET /api/v1/incidentes
-func ListarIncidentesHandler(w http.ResponseWriter, r *http.Request) {
+// CrearIncidenteHandler maneja la creación de incidentes
+func CrearIncidenteHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
 
-	incidentes, err := repository.ListarIncidentes(r.Context(), residencialID)
-	if err != nil {
-		http.Error(w, "Error al consultar incidentes: "+err.Error(), http.StatusInternalServerError)
+	var req model.Incidente
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	go repository.RegistrarAuditoriaAsync(residencialID, "CONSULTA_INCIDENTES", "user_mock", middleware.GetClientIP(r), "Se listaron los incidentes del residencial")
+	req.ResidencialID = residencialID
+	// Si no especificaron quién lo reporta, usamos un valor por defecto
+	if req.ReportadoPor == "" {
+		req.ReportadoPor = "USUARIO_AUTENTICADO"
+	}
+
+	if err := repository.CrearIncidente(r.Context(), &req); err != nil {
+		http.Error(w, "Error creando incidente", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(req)
+}
+
+// ListarIncidentesHandler maneja la consulta de incidentes
+func ListarIncidentesHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	incidentes, err := repository.ObtenerIncidentes(r.Context(), residencialID)
+	if err != nil {
+		http.Error(w, "Error obteniendo incidentes", http.StatusInternalServerError)
+		return
+	}
+
+	if incidentes == nil {
+		incidentes = []model.Incidente{}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(incidentes)
 }
 
-// CreateIncidenteHandler maneja la petición POST /api/v1/incidentes
-func CreateIncidenteHandler(w http.ResponseWriter, r *http.Request) {
+// ResolverIncidenteHandler actualiza el estado de un incidente a resuelto
+func ResolverIncidenteHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
 	
-	var inc model.Incidente
-	if err := json.NewDecoder(r.Body).Decode(&inc); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if inc.Titulo == "" || inc.Descripcion == "" || inc.Prioridad == "" {
-		http.Error(w, "titulo, descripcion y prioridad son campos obligatorios", http.StatusBadRequest)
-		return
-	}
-
-	inc.ResidencialID = residencialID
-	inc.CreadoEn = time.Now()
-	if inc.Estado == "" {
-		inc.Estado = "PENDIENTE"
-	}
+	// Obtenemos el ID del URL path. Ejemplo: /api/v1/incidentes/12/resolver
+	// Asumimos uso nativo net/http mux patterns: /api/v1/incidentes/{id}/resolver
+	idStr := r.PathValue("id")
 	
-	if err := repository.CrearIncidente(r.Context(), &inc); err != nil {
-		http.Error(w, "Error al crear incidente: "+err.Error(), http.StatusInternalServerError)
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "ID inválido", http.StatusBadRequest)
 		return
 	}
 
-	go repository.RegistrarAuditoriaAsync(residencialID, "CREA_INCIDENTE", "user_mock", middleware.GetClientIP(r), fmt.Sprintf("Creó un incidente con ID %d", inc.ID))
+	if err := repository.ResolverIncidente(r.Context(), residencialID, id); err != nil {
+		http.Error(w, "Error resolviendo incidente", http.StatusInternalServerError)
+		return
+	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(inc)
+	w.WriteHeader(http.StatusOK)
 }

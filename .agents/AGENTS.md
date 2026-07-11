@@ -42,3 +42,12 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 - **Integración de Autenticación E2E:** El inicio de sesión devuelve un JWT (`token`) y establece el identificador del inquilino (`X-Residencial-ID`), guardándose de forma segura en `localStorage` o cookies e inyectándose automáticamente en las solicitudes protegidas usando Axios Interceptors.
 - **Identidad Corporativa (NCS365):** La interfaz adopta la identidad de "New Century Security S.A." usando componentes UI estilizados en tonos azules oscuros (`#1e293b`), iconos orientados a la seguridad (Lucide-react: `Shield`, `Siren`, etc.) en un tono amarillo dorado corporativo (`#FACC15`) y logotipos adaptables a fondos oscuros.
 - **Gestión de Layouts (Next.js):** Se implementó un diseño de layouts anidados que aísla la cabecera y el panel lateral dentro de `(dashboard)` para no interferir con las pantallas de inicio de sesión (`/login`), previniendo choques de estilos CSS globales y mejorando la carga progresiva.
+
+## 8. Finanzas y Gestión de Cobros
+- **Integración Externa:** Todo lo relacionado con finanzas y gestión de cobros se manejará a través de una API externa. 
+- **Sistema Existente:** Se consumirán los datos de un sistema de gestión de cobros previamente construido, el cual ya está desarrollado utilizando el stack **Next.js, Nest.js y PostgreSQL**. El backend en Go de este proyecto actuará únicamente como consumidor/cliente de esa API para la información financiera, en lugar de duplicar la lógica de cobro o la base de datos de finanzas localmente.
+
+## 9. Rondas, Puntos QR y Control de Accesos
+- **Estilos en Línea (React):** Para evitar problemas de configuración o dependencias rotas con Tailwind CSS, las pantallas de Gestión de Rondas, Visitas y Supervisores han sido reescritas usando estilos en línea puros en React (`style={{ ... }}`). Se mantiene estrictamente la paleta de colores de la identidad **NCS365**.
+- **Gestión de Supervisores:** Se agregó la pantalla de Supervisores (`/supervisores`) al menú lateral de Operaciones, para tener control sobre el personal.
+- **Relación QR - Casas:** Los `puntos_qr` de las rondas de seguridad ahora pueden estar asociados opcionalmente a una `Casa`. La tabla `casas` posee el flag `tiene_contrato_seguridad`. En el frontend, los puntos QR de casas muestran detalles sobre el propietario y un icono distintivo que ayuda al guardia durante su recorrido.

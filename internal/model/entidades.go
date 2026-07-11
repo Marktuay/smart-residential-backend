@@ -5,10 +5,11 @@ import "time"
 type Role string
 
 const (
-	RoleSisadmin  Role = "SISADMIN"
-	RoleAdmin     Role = "ADMIN"
-	RoleResidente Role = "RESIDENTE"
-	RoleGuardia   Role = "GUARDIA"
+	RoleSisadmin   Role = "SISADMIN"
+	RoleAdmin      Role = "ADMIN"
+	RoleResidente  Role = "RESIDENTE"
+	RoleGuardia    Role = "GUARDIA"
+	RoleSupervisor Role = "SUPERVISOR"
 )
 
 type Residencial struct {
@@ -16,17 +17,6 @@ type Residencial struct {
 	Nombre    string    `json:"nombre"`
 	Direccion string    `json:"direccion"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type Incidente struct {
-	ID            int64     `json:"id"`
-	ResidencialID string    `json:"residencial_id"`
-	Titulo        string    `json:"titulo"`
-	Descripcion   string    `json:"descripcion"`
-	Prioridad     string    `json:"prioridad"`
-	Estado        string    `json:"estado"`
-	CategoriaID   int       `json:"categoria_id"`
-	CreadoEn      time.Time `json:"creado_en"`
 }
 
 type AuditLog struct {
@@ -60,21 +50,25 @@ type LoginResponse struct {
 }
 
 type PuntoQR struct {
-	ID            int64   `json:"id"`
-	ResidencialID string  `json:"residencial_id"`
-	Nombre        string  `json:"nombre"`
-	CodigoQR      string  `json:"codigo_qr"`
-	Latitud       float64 `json:"latitud"`
-	Longitud      float64 `json:"longitud"`
+	ID              int64   `json:"id"`
+	ResidencialID   string  `json:"residencial_id"`
+	CasaID          *int64  `json:"casa_id,omitempty"`
+	Nombre          string  `json:"nombre"`
+	CodigoQR        string  `json:"codigo_qr"`
+	Latitud         float64 `json:"latitud,omitempty"`
+	Longitud        float64 `json:"longitud,omitempty"`
+	NumeroCasa      string  `json:"numero_casa,omitempty"`
+	ResidenteNombre string  `json:"residente_nombre,omitempty"`
 }
 
 type ProgramaRonda struct {
-	ID            int64  `json:"id"`
-	ResidencialID string `json:"residencial_id"`
-	Nombre        string `json:"nombre"`
-	HoraInicio    string `json:"hora_inicio"`
-	HoraFin       string `json:"hora_fin"`
-	Recurrencia   string `json:"recurrencia"`
+	ID            int64   `json:"id"`
+	ResidencialID string  `json:"residencial_id"`
+	Nombre        string  `json:"nombre"`
+	HoraInicio    string  `json:"hora_inicio"`
+	HoraFin       string  `json:"hora_fin"`
+	Recurrencia   string  `json:"recurrencia"`
+	Puntos        []int64 `json:"puntos,omitempty"` // IDs de PuntosQR
 }
 
 type AsignacionRonda struct {
@@ -90,9 +84,14 @@ type Visita struct {
 	ID              int64      `json:"id"`
 	ResidencialID   string     `json:"residencial_id"`
 	NombreVisitante string     `json:"nombre_visitante"`
+	CedulaVisitante string     `json:"cedula_visitante"`
 	Estado          string     `json:"estado"`
 	FechaEsperada   string     `json:"fecha_esperada"`
+	NumeroCasa      string     `json:"numero_casa"`
+	MedioIngreso    string     `json:"medio_ingreso"`
+	PlacaVehiculo   string     `json:"placa_vehiculo"`
 	FechaIngreso    *time.Time `json:"fecha_ingreso,omitempty"`
+	FechaSalida     *time.Time `json:"fecha_salida,omitempty"`
 }
 
 type DashboardStats struct {
@@ -106,4 +105,39 @@ type DashboardStats struct {
 	CasasQR         int `json:"casas_qr"`
 	Residentes      int `json:"residentes"`
 	UsuariosActivos int `json:"usuarios_activos"`
+}
+
+type Casa struct {
+	ID                     int64  `json:"id"`
+	ResidencialID          string `json:"residencial_id"`
+	NumeroCasa             string `json:"numero_casa"`
+	Bloque                 string `json:"bloque"`
+	Estado                 string `json:"estado"`
+	TieneContratoSeguridad bool   `json:"tiene_contrato_seguridad"`
+	CreatedAt              string `json:"created_at"`
+}
+
+type Residente struct {
+	ID            int64     `json:"id"`
+	ResidencialID string    `json:"residencial_id"`
+	CasaID        *int64    `json:"casa_id"`
+	NumeroCasa    string    `json:"numero_casa,omitempty"` // Campo extra para joins
+	Nombre        string    `json:"nombre"`
+	Telefono      string    `json:"telefono"`
+	Email         string    `json:"email"`
+	EsPropietario bool      `json:"es_propietario"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+type Incidente struct {
+	ID              int64      `json:"id"`
+	ResidencialID   string     `json:"residencial_id"`
+	ReportadoPor    string     `json:"reportado_por"`
+	Tipo            string     `json:"tipo"`
+	Descripcion     string     `json:"descripcion"`
+	NivelGravedad   string     `json:"nivel_gravedad"`
+	Estado          string     `json:"estado"`
+	EvidenciaURL    string     `json:"evidencia_url"`
+	FechaCreacion   time.Time  `json:"fecha_creacion"`
+	FechaResolucion *time.Time `json:"fecha_resolucion,omitempty"`
 }

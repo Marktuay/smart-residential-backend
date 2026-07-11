@@ -10,16 +10,16 @@ import (
 func ObtenerEstadisticasDashboard(ctx context.Context, residencialID string) (*model.DashboardStats, error) {
 	stats := &model.DashboardStats{}
 
-	// Contar Incidentes Activos (PENDIENTE o EN_PROGRESO)
-	err := db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND estado IN ('PENDIENTE', 'EN_PROGRESO')", residencialID).Scan(&stats.Activos)
+	// Contar Incidentes Activos (ABIERTO)
+	err := db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND estado = 'ABIERTO'", residencialID).Scan(&stats.Activos)
 	if err != nil { return nil, err }
 
-	// Contar Incidentes Críticos (Prioridad ALTA y Activos)
-	err = db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND prioridad = 'ALTA' AND estado IN ('PENDIENTE', 'EN_PROGRESO')", residencialID).Scan(&stats.Criticos)
+	// Contar Incidentes Críticos (nivel_gravedad ALTA y Activos)
+	err = db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND nivel_gravedad = 'ALTA' AND estado = 'ABIERTO'", residencialID).Scan(&stats.Criticos)
 	if err != nil { return nil, err }
 
 	// Contar Resueltos Hoy
-	err = db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND estado = 'RESUELTO' AND DATE(creado_en) = CURRENT_DATE", residencialID).Scan(&stats.ResueltosHoy)
+	err = db.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM incidentes WHERE residencial_id = $1 AND estado = 'RESUELTO' AND DATE(fecha_creacion) = CURRENT_DATE", residencialID).Scan(&stats.ResueltosHoy)
 	if err != nil { return nil, err }
 
 	// Total Histórico de Incidentes

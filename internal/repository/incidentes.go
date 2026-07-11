@@ -4,24 +4,75 @@ import (
 	"context"
 	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/model"
+	"time"
 )
 
-// CrearIncidente inserta un nuevo incidente en la base de datos
-func CrearIncidente(ctx context.Context, inc *model.Incidente) error {
-	query := `INSERT INTO incidentes (residencial_id, titulo, descripcion, prioridad, estado, categoria_id, creado_en) 
-			  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
-	
-	err := db.DB.QueryRowContext(ctx, query,
-		inc.ResidencialID, inc.Titulo, inc.Descripcion, inc.Prioridad, inc.Estado, inc.CategoriaID, inc.CreadoEn).Scan(&inc.ID)
-	
+// InitIncidentesDB crea la tabla si no existe
+func InitIncidentesDB() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS incidentes (
+		id SERIAL PRIMARY KEY,
+		residencial_id VARCHAR(50) NOT NULL,
+		reportado_por VARCHAR(100) NOT NULL,
+		tipo VARCHAR(50) NOT NULL,
+		descripcion TEXT NOT NULL,
+		nivel_gravedad VARCHAR(20) NOT NULL,
+		estado VARCHAR(20) NOT NULL DEFAULT 'ABIERTO',
+		evidencia_url TEXT,
+		fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
+		fecha_resolucion TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_incidentes_residencial ON incidentes(residencial_id);
+	`
+	_, err := db.DB.Exec(query)
 	return err
 }
 
-// ListarIncidentes obtiene los incidentes de un residencial
-func ListarIncidentes(ctx context.Context, residencialID string) ([]model.Incidente, error) {
-	query := `SELECT id, titulo, descripcion, prioridad, estado, categoria_id, creado_en 
-			  FROM incidentes WHERE residencial_id = $1 ORDER BY creado_en DESC`
+func CrearIncidente(ctx context.Context, incidente *model.Incidente) error {
+	query := `
+		INSERT INTO incidentes (residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, evidencia_url, fecha_creacion)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`
+	incidente.FechaCreacion = time.Now()
+	if incidente.Estado == "" {
+		incidente.Estado = "ABIERTO"
+	}
+
+	err := db.DB.QueryRowContext(ctx, query,
+		incidente.ResidencialID,
+		incidente.ReportadoPor,
+		incidente.Tipo,
+		incidente.Descripcion,
+		incidente.NivelGravedad,
+		incidente.Estado,
+		incidente.EvidenciaURL,
+		incidente.FechaCreacion,
+	).Scan(&incidente.ID)
 	
+	if err != nil {
+		return err
+	}
+
+	// Trigger audit log asynchronously
+	go RegistrarAuditoriaAsync(
+		incidente.ResidencialID,
+		incidente.ReportadoPor, // Guarding the user ID conceptually
+		"CREAR_INCIDENTE",
+		"Incidente creado",
+		"NA",
+	)
+
+	return nil
+}
+
+func ObtenerIncidentes(ctx context.Context, residencialID string) ([]model.Incidente, error) {
+	query := `
+		SELECT id, residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, evidencia_url, fecha_creacion, fecha_resolucion
+		FROM incidentes
+		WHERE residencial_id = $1
+		ORDER BY fecha_creacion DESC
+	`
 	rows, err := db.DB.QueryContext(ctx, query, residencialID)
 	if err != nil {
 		return nil, err
@@ -30,17 +81,52 @@ func ListarIncidentes(ctx context.Context, residencialID string) ([]model.Incide
 
 	var incidentes []model.Incidente
 	for rows.Next() {
-		var inc model.Incidente
-		if err := rows.Scan(&inc.ID, &inc.Titulo, &inc.Descripcion, &inc.Prioridad, &inc.Estado, &inc.CategoriaID, &inc.CreadoEn); err != nil {
+		var i model.Incidente
+		if err := rows.Scan(
+			&i.ID,
+			&i.ResidencialID,
+			&i.ReportadoPor,
+			&i.Tipo,
+			&i.Descripcion,
+			&i.NivelGravedad,
+			&i.Estado,
+			&i.EvidenciaURL,
+			&i.FechaCreacion,
+			&i.FechaResolucion,
+		); err != nil {
 			return nil, err
 		}
-		inc.ResidencialID = residencialID
-		incidentes = append(incidentes, inc)
+		incidentes = append(incidentes, i)
 	}
-	
-	if incidentes == nil {
-		incidentes = []model.Incidente{}
-	}
-	
+
+	// Trigger audit log asynchronously
+	go RegistrarAuditoriaAsync(
+		residencialID,
+		"SISTEMA", // Or the requester if available
+		"CONSULTA_INCIDENTES",
+		"Consulta lista de incidentes",
+		"NA",
+	)
+
 	return incidentes, nil
+}
+
+func ResolverIncidente(ctx context.Context, residencialID string, id int64) error {
+	query := `
+		UPDATE incidentes
+		SET estado = 'RESUELTO', fecha_resolucion = $1
+		WHERE id = $2 AND residencial_id = $3
+	`
+	_, err := db.DB.ExecContext(ctx, query, time.Now(), id, residencialID)
+	
+	if err == nil {
+		go RegistrarAuditoriaAsync(
+			residencialID,
+			"SISTEMA",
+			"RESOLVER_INCIDENTE",
+			"Incidente resuelto",
+			"NA",
+		)
+	}
+	return err
 }

@@ -68,3 +68,28 @@ func ListarAsignacionesRondasHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(asignaciones)
 }
+
+// CrearAsignacionRondaHandler asigna un programa a un guardia
+func CrearAsignacionRondaHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	var a model.AsignacionRonda
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+		http.Error(w, "Error decodificando request", http.StatusBadRequest)
+		return
+	}
+
+	a.ResidencialID = residencialID
+
+	if err := repository.CrearAsignacionRonda(r.Context(), &a); err != nil {
+		http.Error(w, "Error creando la asignación: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Auditar acción (Asíncrono)
+	go repository.RegistrarAuditoriaAsync(residencialID, "ASIGNA_RONDA", "Usuario ID (JWT)", middleware.GetClientIP(r), "Se asignó la ronda ID: ")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(a)
+}
