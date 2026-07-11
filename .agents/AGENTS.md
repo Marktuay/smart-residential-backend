@@ -36,4 +36,9 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 
 ## 6. Frontend y Configuración de CORS
 - **Stack del Frontend:** La aplicación cliente se desarrollará utilizando **Next.js con Turbopack**.
-- **Regla CORS:** Durante el desarrollo, el backend en Go permite solicitudes de todos los orígenes (`Access-Control-Allow-Origin: *`) en `internal/middleware/cors.go` para facilitar la conexión desde `localhost:3000`. Al pasar a producción, el middleware de CORS debe actualizarse estrictamente para apuntar al dominio final del frontend (ej: Vercel).
+- **Regla CORS:** Durante el desarrollo, el backend en Go permite solicitudes de todos los orígenes (`Access-Control-Allow-Origin: *`) en `internal/middleware/cors.go` para facilitar la conexión desde `localhost:3000`. Además, el middleware permite el encabezado custom `X-Residencial-ID` para que el frontend inyecte el tenant activo en cada petición HTTP (Preflight CORS). Al pasar a producción, el middleware de CORS debe actualizarse estrictamente para apuntar al dominio final del frontend (ej: Vercel).
+
+## 7. Frontend, Identidad Visual y Seguridad
+- **Integración de Autenticación E2E:** El inicio de sesión devuelve un JWT (`token`) y establece el identificador del inquilino (`X-Residencial-ID`), guardándose de forma segura en `localStorage` o cookies e inyectándose automáticamente en las solicitudes protegidas usando Axios Interceptors.
+- **Identidad Corporativa (NCS365):** La interfaz adopta la identidad de "New Century Security S.A." usando componentes UI estilizados en tonos azules oscuros (`#1e293b`), iconos orientados a la seguridad (Lucide-react: `Shield`, `Siren`, etc.) en un tono amarillo dorado corporativo (`#FACC15`) y logotipos adaptables a fondos oscuros.
+- **Gestión de Layouts (Next.js):** Se implementó un diseño de layouts anidados que aísla la cabecera y el panel lateral dentro de `(dashboard)` para no interferir con las pantallas de inicio de sesión (`/login`), previniendo choques de estilos CSS globales y mejorando la carga progresiva.

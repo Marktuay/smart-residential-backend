@@ -8,7 +8,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		// Permitir todos los orígenes (en producción se debe limitar al dominio del frontend)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Residencial-ID")
 		
 		// Responder de forma exitosa a las peticiones OPTIONS pre-flight
 		if r.Method == http.MethodOptions {

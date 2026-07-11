@@ -17,17 +17,18 @@ func main() {
 	}
 	defer db.Close()
 
-	password := "admin123"
+	email := "informatica@newcenturyni.com"
+	password := "Mark8721!@"
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	query := `INSERT INTO usuarios (residencial_id, email, password_hash, rol) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`
-	_, err = db.Exec(query, "Residencial-Las-Torres", "admin@lastorres.com", string(hash), "ADMIN")
+	_, err = db.Exec(query, "Residencial-Las-Torres", email, string(hash), "ADMIN")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Usuario admin creado: admin@lastorres.com / admin123")
+	fmt.Println("Usuario admin creado:", email, "/", password)
 }
