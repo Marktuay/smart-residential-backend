@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"smart-residential-backend/internal/auth"
+	"smart-residential-backend/internal/model"
 	"strings"
 )
 
@@ -31,7 +32,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Inyectar datos en el contexto
-		ctx := context.WithValue(r.Context(), ResidencialIDKey, claims.ResidencialID)
+		residencialID := claims.ResidencialID
+		if claims.Rol == model.RoleSisadmin {
+			if headerResID := r.Header.Get("X-Residencial-ID"); headerResID != "" {
+				residencialID = headerResID
+			}
+		}
+
+		ctx := context.WithValue(r.Context(), ResidencialIDKey, residencialID)
 		ctx = context.WithValue(ctx, UserRoleKey, claims.Rol)
 		
 		next.ServeHTTP(w, r.WithContext(ctx))
