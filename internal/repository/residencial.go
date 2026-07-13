@@ -20,12 +20,28 @@ func InitResidencialesDB() error {
 	);
 	`
 	_, err := db.DB.Exec(query)
-	return err
+	if err != nil {
+		return err
+	}
+
+	alterQueries := []string{
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS tolerancia_ronda_mins INTEGER DEFAULT 15`,
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS frecuencia_gps_seg INTEGER DEFAULT 10`,
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS email_alerta_incidentes VARCHAR(150) DEFAULT ''`,
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS telefono_emergencia VARCHAR(20) DEFAULT ''`,
+	}
+	for _, q := range alterQueries {
+		if _, err := db.DB.Exec(q); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ListarResidenciales(ctx context.Context) ([]model.Residencial, error) {
 	query := `
-		SELECT id, nombre, direccion, latitud_centro, longitud_centro, zoom_defecto, created_at
+		SELECT id, nombre, direccion, latitud_centro, longitud_centro, zoom_defecto, 
+		       tolerancia_ronda_mins, frecuencia_gps_seg, email_alerta_incidentes, telefono_emergencia, created_at
 		FROM residenciales
 		ORDER BY nombre ASC`
 
@@ -41,6 +57,7 @@ func ListarResidenciales(ctx context.Context) ([]model.Residencial, error) {
 		if err := rows.Scan(
 			&r.ID, &r.Nombre, &r.Direccion,
 			&r.LatitudCentro, &r.LongitudCentro, &r.ZoomDefecto,
+			&r.ToleranciaRondaMins, &r.FrecuenciaGpsSeg, &r.EmailAlertaIncidentes, &r.TelefonoEmergencia,
 			&r.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -68,7 +85,8 @@ func CrearResidencial(ctx context.Context, r *model.Residencial) error {
 
 func ObtenerResidencial(id string) (*model.Residencial, error) {
 	query := `
-		SELECT id, nombre, direccion, latitud_centro, longitud_centro, zoom_defecto, created_at
+		SELECT id, nombre, direccion, latitud_centro, longitud_centro, zoom_defecto, 
+		       tolerancia_ronda_mins, frecuencia_gps_seg, email_alerta_incidentes, telefono_emergencia, created_at
 		FROM residenciales
 		WHERE id = $1`
 
@@ -76,11 +94,28 @@ func ObtenerResidencial(id string) (*model.Residencial, error) {
 	err := db.DB.QueryRow(query, id).Scan(
 		&r.ID, &r.Nombre, &r.Direccion, 
 		&r.LatitudCentro, &r.LongitudCentro, &r.ZoomDefecto, 
+		&r.ToleranciaRondaMins, &r.FrecuenciaGpsSeg, &r.EmailAlertaIncidentes, &r.TelefonoEmergencia,
 		&r.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &r, nil
+}
+
+func ActualizarConfiguracionResidencial(ctx context.Context, id string, lat float64, lng float64, zoom int, tolerancia int, frecuencia int, email string, tel string) error {
+	query := `
+		UPDATE residenciales
+		SET latitud_centro = $1,
+		    longitud_centro = $2,
+		    zoom_defecto = $3,
+		    tolerancia_ronda_mins = $4,
+		    frecuencia_gps_seg = $5,
+		    email_alerta_incidentes = $6,
+		    telefono_emergencia = $7
+		WHERE id = $8
+	`
+	_, err := db.DB.ExecContext(ctx, query, lat, lng, zoom, tolerancia, frecuencia, email, tel, id)
+	return err
 }
 
 func ObtenerCasas(residencialID string) ([]model.Casa, error) {

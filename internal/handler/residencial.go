@@ -141,3 +141,56 @@ func RegistrarResidenteHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(residente)
 }
+
+func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	var req struct {
+		LatitudCentro         float64 `json:"latitud_centro"`
+		LongitudCentro        float64 `json:"longitud_centro"`
+		ZoomDefecto           int     `json:"zoom_defecto"`
+		ToleranciaRondaMins   int     `json:"tolerancia_ronda_mins"`
+		FrecuenciaGpsSeg      int     `json:"frecuencia_gps_seg"`
+		EmailAlertaIncidentes string  `json:"email_alerta_incidentes"`
+		TelefonoEmergencia    string  `json:"telefono_emergencia"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
+		return
+	}
+
+	// Validaciones básicas
+	if req.ZoomDefecto < 1 || req.ZoomDefecto > 22 {
+		req.ZoomDefecto = 13
+	}
+	if req.ToleranciaRondaMins < 1 {
+		req.ToleranciaRondaMins = 15
+	}
+	if req.FrecuenciaGpsSeg < 5 {
+		req.FrecuenciaGpsSeg = 10
+	}
+
+	err := repository.ActualizarConfiguracionResidencial(
+		r.Context(),
+		residencialID,
+		req.LatitudCentro,
+		req.LongitudCentro,
+		req.ZoomDefecto,
+		req.ToleranciaRondaMins,
+		req.FrecuenciaGpsSeg,
+		req.EmailAlertaIncidentes,
+		req.TelefonoEmergencia,
+	)
+	if err != nil {
+		http.Error(w, "Error al actualizar configuración: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Registrar en auditoría
+	go repository.RegistrarAuditoriaAsync(residencialID, "ACTUALIZAR_CONFIGURACION", "user_mock", middleware.GetClientIP(r), "Se actualizó la configuración del residencial")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
+}

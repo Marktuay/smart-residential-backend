@@ -13,13 +13,17 @@ const (
 )
 
 type Residencial struct {
-	ID        string    `json:"id"`
-	Nombre    string    `json:"nombre"`
-	Direccion      string    `json:"direccion"`
-	LatitudCentro  *float64  `json:"latitud_centro"`
-	LongitudCentro *float64  `json:"longitud_centro"`
-	ZoomDefecto    int       `json:"zoom_defecto"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID                    string    `json:"id"`
+	Nombre                string    `json:"nombre"`
+	Direccion             string    `json:"direccion"`
+	LatitudCentro         *float64  `json:"latitud_centro"`
+	LongitudCentro        *float64  `json:"longitud_centro"`
+	ZoomDefecto           int       `json:"zoom_defecto"`
+	ToleranciaRondaMins   int       `json:"tolerancia_ronda_mins"`
+	FrecuenciaGpsSeg      int       `json:"frecuencia_gps_seg"`
+	EmailAlertaIncidentes string    `json:"email_alerta_incidentes"`
+	TelefonoEmergencia    string    `json:"telefono_emergencia"`
+	CreatedAt             time.Time `json:"created_at"`
 }
 
 type AuditLog struct {
