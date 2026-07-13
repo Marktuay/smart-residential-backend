@@ -53,15 +53,16 @@ type LoginResponse struct {
 }
 
 type PuntoQR struct {
-	ID              int64   `json:"id"`
-	ResidencialID   string  `json:"residencial_id"`
-	CasaID          *int64  `json:"casa_id,omitempty"`
-	Nombre          string  `json:"nombre"`
-	CodigoQR        string  `json:"codigo_qr"`
-	Latitud         float64 `json:"latitud,omitempty"`
-	Longitud        float64 `json:"longitud,omitempty"`
-	NumeroCasa      string  `json:"numero_casa,omitempty"`
-	ResidenteNombre string  `json:"residente_nombre,omitempty"`
+	ID                     int64   `json:"id"`
+	ResidencialID          string  `json:"residencial_id"`
+	CasaID                 *int64  `json:"casa_id,omitempty"`
+	Nombre                 string  `json:"nombre"`
+	CodigoQR               string  `json:"codigo_qr"`
+	Latitud                float64 `json:"latitud,omitempty"`
+	Longitud               float64 `json:"longitud,omitempty"`
+	NumeroCasa             string  `json:"numero_casa,omitempty"`
+	ResidenteNombre        string  `json:"residente_nombre,omitempty"`
+	TieneContratoSeguridad bool    `json:"tiene_contrato_seguridad"`
 }
 
 type ProgramaRonda struct {
@@ -143,4 +144,17 @@ type Incidente struct {
 	EvidenciaURL    string     `json:"evidencia_url"`
 	FechaCreacion   time.Time  `json:"fecha_creacion"`
 	FechaResolucion *time.Time `json:"fecha_resolucion,omitempty"`
+}
+
+type Turno struct {
+	ID            int64  `json:"id"`
+	ResidencialID string `json:"residencial_id"`
+	GuardiaID     int64  `json:"guardia_id"`
+	GuardiaEmail  string `json:"guardia_email,omitempty"`
+	Fecha         string `json:"fecha"`          // YYYY-MM-DD
+	HoraInicio    string `json:"hora_inicio"`    // HH:MM
+	HoraFin       string `json:"hora_fin"`       // HH:MM
+	Descripcion   string `json:"descripcion"`
+	Ubicacion     string `json:"ubicacion"`
+	Estado        string `json:"estado"`         // PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO
 }

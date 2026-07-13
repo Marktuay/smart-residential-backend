@@ -21,7 +21,7 @@ func GenerarCodigoQRSeguro() string {
 func ListarPuntosQR(residencialID string) ([]model.PuntoQR, error) {
 	query := `
 		SELECT p.id, p.residencial_id, p.casa_id, p.nombre, p.codigo_qr, p.latitud, p.longitud, 
-		       c.numero_casa, r.nombre AS residente_nombre
+		       c.numero_casa, r.nombre AS residente_nombre, COALESCE(c.tiene_contrato_seguridad, false)
 		FROM puntos_qr p
 		LEFT JOIN casas c ON p.casa_id = c.id
 		LEFT JOIN residentes r ON c.id = r.casa_id AND r.es_propietario = true
@@ -51,6 +51,7 @@ func ListarPuntosQR(residencialID string) ([]model.PuntoQR, error) {
 			&p.Longitud,
 			&numeroCasa,
 			&residenteNombre,
+			&p.TieneContratoSeguridad,
 		); err != nil {
 			return nil, err
 		}

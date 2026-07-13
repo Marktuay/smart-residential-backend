@@ -25,6 +25,9 @@ func main() {
 	if err := repository.InitIncidentesDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de incidentes: %v", err)
 	}
+	if err := repository.InitTurnosDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar la tabla de turnos: %v", err)
+	}
 
 	// Iniciar Garbage Collector (cada 24h) para el historial de ubicaciones
 	go func() {
@@ -94,6 +97,12 @@ func main() {
 	// Usuarios
 	mux.Handle("GET /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarUsuariosHandler))))
 	mux.Handle("POST /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearUsuarioHandler))))
+
+	// Turnos
+	mux.Handle("GET /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarTurnosHandler))))
+	mux.Handle("POST /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearTurnoHandler))))
+	mux.Handle("PUT /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarTurnoHandler))))
+	mux.Handle("DELETE /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarTurnoHandler))))
 
 	// Envolver todo el enrutador con el middleware CORS
 	handlerConCORS := middleware.CorsMiddleware(mux)
