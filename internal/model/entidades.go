@@ -158,3 +158,12 @@ type Turno struct {
 	Ubicacion     string `json:"ubicacion"`
 	Estado        string `json:"estado"`         // PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO
 }
+
+type SuscripcionPush struct {
+	ID            int64  `json:"id"`
+	ResidencialID string `json:"residencial_id"`
+	UsuarioID     int64  `json:"usuario_id"`
+	Endpoint      string `json:"endpoint"`
+	P256dh        string `json:"p256dh"`
+	Auth          string `json:"auth"`
+}

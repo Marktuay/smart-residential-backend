@@ -28,6 +28,10 @@ func main() {
 	if err := repository.InitTurnosDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de turnos: %v", err)
 	}
+	if err := repository.InitPushDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar la tabla de suscripciones push: %v", err)
+	}
+	handler.InitVAPIDKeys()
 
 	// Iniciar Garbage Collector (cada 24h) para el historial de ubicaciones
 	go func() {
@@ -85,6 +89,11 @@ func main() {
 	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
 	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
 	mux.Handle("GET /api/v1/tracking/historial", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerHistorialTrackingHandler))))
+
+	// Notificaciones Push
+	mux.Handle("GET /api/v1/push/vapid-public-key", http.HandlerFunc(handler.ObtenerVAPIDPublicKeyHandler))
+	mux.Handle("POST /api/v1/push/subscribe", middleware.AuthMiddleware(http.HandlerFunc(handler.RegistrarSuscripcionHandler)))
+	mux.Handle("POST /api/v1/push/send", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EnviarNotificacionHandler))))
 
 	// Residencial
 	mux.Handle("GET /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.ListarResidencialesHandler))))

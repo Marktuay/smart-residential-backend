@@ -13,14 +13,16 @@ var JWTSecretKey = []byte("super-secret-key-para-sagr360")
 
 // Claims define la estructura del payload del JWT
 type Claims struct {
+	UsuarioID     int64      `json:"usuario_id"`
 	ResidencialID string     `json:"residencial_id"`
 	Rol           model.Role `json:"rol"`
 	jwt.RegisteredClaims
 }
 
 // GenerarToken crea un nuevo JWT para el usuario autenticado
-func GenerarToken(residencialID string, rol model.Role) (string, error) {
+func GenerarToken(usuarioID int64, residencialID string, rol model.Role) (string, error) {
 	claims := &Claims{
+		UsuarioID:     usuarioID,
 		ResidencialID: residencialID,
 		Rol:           rol,
 		RegisteredClaims: jwt.RegisteredClaims{

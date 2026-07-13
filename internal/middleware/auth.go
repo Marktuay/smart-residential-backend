@@ -13,6 +13,7 @@ type contextKey string
 const (
 	ResidencialIDKey contextKey = "residencialID"
 	UserRoleKey      contextKey = "userRole"
+	UsuarioIDKey     contextKey = "usuarioID"
 )
 
 // AuthMiddleware extrae y valida el JWT e inyecta los datos en el contexto
@@ -41,6 +42,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), ResidencialIDKey, residencialID)
 		ctx = context.WithValue(ctx, UserRoleKey, claims.Rol)
+		ctx = context.WithValue(ctx, UsuarioIDKey, claims.UsuarioID)
 		
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
