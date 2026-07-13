@@ -52,3 +52,29 @@ func RegistrarVisita(ctx context.Context, v *model.Visita) error {
 		v.PlacaVehiculo,
 	).Scan(&v.ID)
 }
+
+// ActualizarEstadoVisita actualiza el estado y los tiempos de la visita
+func ActualizarEstadoVisita(ctx context.Context, residencialID string, id int64, estado string) error {
+	var query string
+	if estado == "EN_CURSO" {
+		query = `
+			UPDATE visitas 
+			SET estado = $1, fecha_ingreso = CURRENT_TIMESTAMP 
+			WHERE residencial_id = $2 AND id = $3
+		`
+	} else if estado == "FINALIZADA" {
+		query = `
+			UPDATE visitas 
+			SET estado = $1, fecha_salida = CURRENT_TIMESTAMP 
+			WHERE residencial_id = $2 AND id = $3
+		`
+	} else {
+		query = `
+			UPDATE visitas 
+			SET estado = $1 
+			WHERE residencial_id = $2 AND id = $3
+		`
+	}
+	_, err := db.DB.ExecContext(ctx, query, estado, residencialID, id)
+	return err
+}

@@ -84,6 +84,7 @@ func main() {
 	// Visitas
 	mux.Handle("GET /api/v1/visitas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ListarVisitasHandler))))
 	mux.Handle("POST /api/v1/visitas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleResidente, model.RoleGuardia)(http.HandlerFunc(handler.RegistrarVisitaHandler))))
+	mux.Handle("PUT /api/v1/visitas/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ActualizarEstadoVisitaHandler))))
 
 	// Geolocalización
 	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))

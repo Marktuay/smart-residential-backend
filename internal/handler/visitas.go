@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
 	"smart-residential-backend/internal/repository"
@@ -52,4 +53,39 @@ func RegistrarVisitaHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(v)
+}
+
+func ActualizarEstadoVisitaHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "ID de visita inválido", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Estado string `json:"estado"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
+		return
+	}
+
+	if req.Estado != "PENDIENTE" && req.Estado != "EN_CURSO" && req.Estado != "FINALIZADA" {
+		http.Error(w, "Estado de visita inválido", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.ActualizarEstadoVisita(r.Context(), residencialID, id, req.Estado); err != nil {
+		http.Error(w, "Error actualizando estado de visita: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Registrar en auditoría
+	go repository.RegistrarAuditoriaAsync(residencialID, "ACTUALIZAR_VISITA", "user_mock", middleware.GetClientIP(r), "Se actualizó la visita ID: "+idStr+" al estado: "+req.Estado)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
 }
