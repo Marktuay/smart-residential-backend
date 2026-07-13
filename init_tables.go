@@ -12,6 +12,14 @@ func main() {
 	}
 
 	queries := []string{
+		`CREATE TABLE IF NOT EXISTS historial_ubicaciones (
+			id SERIAL PRIMARY KEY,
+			residencial_id VARCHAR(50) NOT NULL,
+			usuario_id INT NOT NULL,
+			latitud DOUBLE PRECISION NOT NULL,
+			longitud DOUBLE PRECISION NOT NULL,
+			registrado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
 		`CREATE TABLE IF NOT EXISTS puntos_qr (
 			id SERIAL PRIMARY KEY,
 			residencial_id VARCHAR(50) NOT NULL,
@@ -75,6 +83,19 @@ func main() {
 	_, err = db.DB.Exec(`ALTER TABLE puntos_qr ADD COLUMN IF NOT EXISTS casa_id INT REFERENCES casas(id) ON DELETE SET NULL;`)
 	if err != nil {
 		log.Printf("Aviso (casa_id): %v", err)
+	}
+
+	// Añadir coordenadas y zoom al residencial
+	queriesResidenciales := []string{
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS latitud_centro DOUBLE PRECISION;`,
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS longitud_centro DOUBLE PRECISION;`,
+		`ALTER TABLE residenciales ADD COLUMN IF NOT EXISTS zoom_defecto INT DEFAULT 15;`,
+	}
+	for _, q := range queriesResidenciales {
+		_, err := db.DB.Exec(q)
+		if err != nil {
+			log.Printf("Aviso (residenciales): %v", err)
+		}
 	}
 
 	fmt.Println("Migraciones ejecutadas exitosamente.")

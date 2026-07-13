@@ -15,8 +15,11 @@ const (
 type Residencial struct {
 	ID        string    `json:"id"`
 	Nombre    string    `json:"nombre"`
-	Direccion string    `json:"direccion"`
-	CreatedAt time.Time `json:"created_at"`
+	Direccion      string    `json:"direccion"`
+	LatitudCentro  *float64  `json:"latitud_centro"`
+	LongitudCentro *float64  `json:"longitud_centro"`
+	ZoomDefecto    int       `json:"zoom_defecto"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type AuditLog struct {

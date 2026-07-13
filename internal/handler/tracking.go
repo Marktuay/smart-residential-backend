@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/repository"
@@ -49,4 +50,36 @@ func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ubicaciones)
+}
+
+// ObtenerHistorialTrackingHandler devuelve el historial de ubicaciones de un guardia en un rango de fechas
+func ObtenerHistorialTrackingHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	
+	// Extraer parámetros de la URL
+	usuarioIDStr := r.URL.Query().Get("usuario_id")
+	fechaInicio := r.URL.Query().Get("fecha_inicio")
+	fechaFin := r.URL.Query().Get("fecha_fin")
+
+	if usuarioIDStr == "" || fechaInicio == "" || fechaFin == "" {
+		http.Error(w, "usuario_id, fecha_inicio y fecha_fin son requeridos", http.StatusBadRequest)
+		return
+	}
+
+	var usuarioID int64
+	// Parsear int
+	fmt.Sscanf(usuarioIDStr, "%d", &usuarioID)
+
+	historial, err := repository.ObtenerHistorialUsuario(r.Context(), residencialID, usuarioID, fechaInicio, fechaFin)
+	if err != nil {
+		http.Error(w, "Error obteniendo historial: " + err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if historial == nil {
+		historial = []map[string]interface{}{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(historial)
 }

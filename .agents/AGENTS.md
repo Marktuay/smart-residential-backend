@@ -51,3 +51,8 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 - **Estilos en Línea (React):** Para evitar problemas de configuración o dependencias rotas con Tailwind CSS, las pantallas de Gestión de Rondas, Visitas y Supervisores han sido reescritas usando estilos en línea puros en React (`style={{ ... }}`). Se mantiene estrictamente la paleta de colores de la identidad **NCS365**.
 - **Gestión de Supervisores:** Se agregó la pantalla de Supervisores (`/supervisores`) al menú lateral de Operaciones, para tener control sobre el personal.
 - **Relación QR - Casas:** Los `puntos_qr` de las rondas de seguridad ahora pueden estar asociados opcionalmente a una `Casa`. La tabla `casas` posee el flag `tiene_contrato_seguridad`. En el frontend, los puntos QR de casas muestran detalles sobre el propietario y un icono distintivo que ayuda al guardia durante su recorrido.
+
+## 10. Jerarquía de Instalaciones y Mapas (Gestión SISADMIN)
+- **Creación de Residenciales:** La creación de nuevas instalaciones (Residenciales) es responsabilidad exclusiva del rol `SISADMIN`. Esto se realiza desde el frontend en la pestaña de "Instalaciones" dentro de Gestión Residencial.
+- **Configuración Geográfica:** Cada residencial guarda su propia configuración de mapas (Latitud Centro, Longitud Centro y Zoom por Defecto) en la tabla `residenciales`. Estos datos se configuran al crear la instalación y deben ser utilizados por defecto al cargar los mapas operativos de ese inquilino.
+- **Jerarquía:** Antes de registrar Ubicaciones, Casas o Puntos QR, se debe registrar el Residencial base.

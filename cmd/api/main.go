@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/handler"
 	"smart-residential-backend/internal/middleware"
@@ -17,9 +19,28 @@ func main() {
 	defer db.DB.Close()
 
 	// Inicializar tablas necesarias (si no existen)
+	if err := repository.InitResidencialesDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar la tabla de residenciales: %v", err)
+	}
 	if err := repository.InitIncidentesDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de incidentes: %v", err)
 	}
+
+	// Iniciar Garbage Collector (cada 24h) para el historial de ubicaciones
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for {
+			ctx := context.Background()
+			eliminados, err := repository.EliminarUbicacionesAntiguas(ctx, 60)
+			if err != nil {
+				log.Printf("Error en Garbage Collector de ubicaciones: %v", err)
+			} else {
+				log.Printf("Garbage Collector ejecutado: %d ubicaciones antiguas eliminadas", eliminados)
+			}
+			<-ticker.C
+		}
+	}()
 
 	mux := http.NewServeMux()
 
@@ -60,8 +81,12 @@ func main() {
 	// Geolocalización
 	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
 	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
+	mux.Handle("GET /api/v1/tracking/historial", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerHistorialTrackingHandler))))
 
 	// Residencial
+	mux.Handle("GET /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.ListarResidencialesHandler))))
+	mux.Handle("POST /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.CrearResidencialHandler))))
+	mux.Handle("GET /api/v1/residencial/info", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerResidencialHandler))))
 	mux.Handle("GET /api/v1/casas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarCasasHandler))))
 	mux.Handle("POST /api/v1/casas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarCasaHandler))))
 	mux.Handle("GET /api/v1/residentes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarResidentesHandler))))

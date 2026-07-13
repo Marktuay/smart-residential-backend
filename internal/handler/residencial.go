@@ -8,6 +8,56 @@ import (
 	"smart-residential-backend/internal/repository"
 )
 
+func ObtenerResidencialHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	residencial, err := repository.ObtenerResidencial(residencialID)
+	if err != nil {
+		http.Error(w, "Error al obtener residencial", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(residencial)
+}
+
+func ListarResidencialesHandler(w http.ResponseWriter, r *http.Request) {
+	// Solo debería acceder a esto un SISADMIN, o en este endpoint se retornan todos.
+	residenciales, err := repository.ListarResidenciales(r.Context())
+	if err != nil {
+		http.Error(w, "Error al listar residenciales", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(residenciales)
+}
+
+func CrearResidencialHandler(w http.ResponseWriter, r *http.Request) {
+	var residencial model.Residencial
+	if err := json.NewDecoder(r.Body).Decode(&residencial); err != nil {
+		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
+		return
+	}
+
+	if residencial.ID == "" || residencial.Nombre == "" {
+		http.Error(w, "ID y Nombre son requeridos", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.CrearResidencial(r.Context(), &residencial); err != nil {
+		http.Error(w, "Error al crear residencial", http.StatusInternalServerError)
+		return
+	}
+
+	// Opcional: Registrar auditoría
+	go repository.RegistrarAuditoriaAsync("SISADMIN", "SISADMIN", "CREAR_RESIDENCIAL", "NA", "Se creó el residencial "+residencial.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(residencial)
+}
+
 func ListarCasasHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
 
