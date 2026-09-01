@@ -25,7 +25,14 @@ func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := repository.RegistrarUbicacion(r.Context(), residencialID, req.UsuarioID, req.Latitud, req.Longitud); err != nil {
+	usuarioID := req.UsuarioID
+	if usuarioID == 0 {
+		if ctxUID, ok := r.Context().Value(middleware.UsuarioIDKey).(int64); ok {
+			usuarioID = ctxUID
+		}
+	}
+
+	if err := repository.RegistrarUbicacion(r.Context(), residencialID, usuarioID, req.Latitud, req.Longitud); err != nil {
 		http.Error(w, "Error guardando ubicación: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
