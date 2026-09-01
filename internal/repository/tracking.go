@@ -13,13 +13,12 @@ func RegistrarUbicacion(ctx context.Context, residencialID string, usuarioID int
 		return err
 	}
 
+	// Eliminar ubicación anterior activa del usuario
+	_, _ = tx.ExecContext(ctx, "DELETE FROM rastreo_ubicacion WHERE usuario_id = $1", usuarioID)
+
 	queryActual := `
 	INSERT INTO rastreo_ubicacion (residencial_id, usuario_id, latitud, longitud, actualizado_en) 
 	VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-	ON CONFLICT (usuario_id) DO UPDATE 
-	SET latitud = EXCLUDED.latitud, 
-	    longitud = EXCLUDED.longitud, 
-	    actualizado_en = CURRENT_TIMESTAMP
 	`
 	_, err = tx.ExecContext(ctx, queryActual, residencialID, usuarioID, latitud, longitud)
 	if err != nil {
