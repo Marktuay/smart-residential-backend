@@ -87,10 +87,10 @@ func main() {
 	mux.Handle("PUT /api/v1/visitas/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ActualizarEstadoVisitaHandler))))
 
 	// Geolocalización
-	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
-	mux.Handle("DELETE /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUbicacionHandler))))
-	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
-	mux.Handle("GET /api/v1/tracking/historial", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerHistorialTrackingHandler))))
+	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleGuardiaPatrullero, model.RoleGuardiaMotorizado, model.RoleOperadorC2, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
+	mux.Handle("DELETE /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleGuardiaPatrullero, model.RoleGuardiaMotorizado, model.RoleOperadorC2, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUbicacionHandler))))
+	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleGuardiaPatrullero, model.RoleGuardiaMotorizado, model.RoleOperadorC2, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
+	mux.Handle("GET /api/v1/tracking/historial", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleGuardiaPatrullero, model.RoleGuardiaMotorizado, model.RoleOperadorC2, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerHistorialTrackingHandler))))
 
 	// Notificaciones Push
 	mux.Handle("GET /api/v1/push/vapid-public-key", http.HandlerFunc(handler.ObtenerVAPIDPublicKeyHandler))

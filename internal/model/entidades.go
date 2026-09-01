@@ -5,11 +5,14 @@ import "time"
 type Role string
 
 const (
-	RoleSisadmin   Role = "SISADMIN"
-	RoleAdmin      Role = "ADMIN"
-	RoleResidente  Role = "RESIDENTE"
-	RoleGuardia    Role = "GUARDIA"
-	RoleSupervisor Role = "SUPERVISOR"
+	RoleSisadmin          Role = "SISADMIN"
+	RoleAdmin             Role = "ADMIN"
+	RoleResidente         Role = "RESIDENTE"
+	RoleGuardia           Role = "GUARDIA"
+	RoleGuardiaPatrullero Role = "GUARDIA_PATRULLERO"
+	RoleGuardiaMotorizado Role = "GUARDIA_MOTORIZADO"
+	RoleOperadorC2        Role = "OPERADOR_C2"
+	RoleSupervisor        Role = "SUPERVISOR"
 )
 
 type Residencial struct {
