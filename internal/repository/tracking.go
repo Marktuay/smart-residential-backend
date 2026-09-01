@@ -39,14 +39,19 @@ func RegistrarUbicacion(ctx context.Context, residencialID string, usuarioID int
 	return tx.Commit()
 }
 
-// ObtenerUbicacionesActivas devuelve las últimas ubicaciones de los guardias del residencial
-// Retorna un slice de mapas para simplificar el JSON en este ejemplo
+// EliminarUbicacionActiva remueve la posición activa del guardia al apagar GPS o cerrar sesión
+func EliminarUbicacionActiva(ctx context.Context, usuarioID int64) error {
+	_, err := db.DB.ExecContext(ctx, "DELETE FROM rastreo_ubicacion WHERE usuario_id = $1", usuarioID)
+	return err
+}
+
+// ObtenerUbicacionesActivas devuelve las ubicaciones de guardias que han transmitido en los últimos 3 minutos
 func ObtenerUbicacionesActivas(ctx context.Context, residencialID string) ([]map[string]interface{}, error) {
 	query := `
 	SELECT r.usuario_id, u.email, r.latitud, r.longitud, r.actualizado_en 
 	FROM rastreo_ubicacion r
 	JOIN usuarios u ON r.usuario_id = u.id
-	WHERE r.residencial_id = $1
+	WHERE r.residencial_id = $1 AND r.actualizado_en >= (CURRENT_TIMESTAMP - INTERVAL '3 minutes')
 	`
 	rows, err := db.DB.QueryContext(ctx, query, residencialID)
 	if err != nil {

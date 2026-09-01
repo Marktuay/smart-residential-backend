@@ -88,6 +88,7 @@ func main() {
 
 	// Geolocalización
 	mux.Handle("POST /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarUbicacionHandler))))
+	mux.Handle("DELETE /api/v1/tracking/location", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUbicacionHandler))))
 	mux.Handle("GET /api/v1/tracking/live", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerUbicacionesHandler))))
 	mux.Handle("GET /api/v1/tracking/historial", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleGuardia, model.RoleSupervisor, model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerHistorialTrackingHandler))))
 

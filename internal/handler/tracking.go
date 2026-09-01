@@ -41,6 +41,23 @@ func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"success"}`))
 }
 
+// EliminarUbicacionHandler borra la posición activa del guardia al desactivar el rastreo o cerrar sesión
+func EliminarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
+	usuarioID, ok := r.Context().Value(middleware.UsuarioIDKey).(int64)
+	if !ok || usuarioID == 0 {
+		http.Error(w, "Usuario no identificado", http.StatusUnauthorized)
+		return
+	}
+
+	if err := repository.EliminarUbicacionActiva(r.Context(), usuarioID); err != nil {
+		http.Error(w, "Error eliminando ubicación activa: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"deleted"}`))
+}
+
 // ObtenerUbicacionesHandler devuelve las últimas ubicaciones registradas
 func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
