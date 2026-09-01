@@ -82,12 +82,12 @@ func ObtenerUbicacionesActivas(ctx context.Context, residencialID string) ([]map
 	return ubicaciones, nil
 }
 
-// ObtenerHistorialUsuario obtiene el historial de ubicaciones de un guardia específico en un rango de fechas
+// ObtenerHistorialUsuario obtiene el historial de ubicaciones de un guardia específico o de todos (si usuarioID es 0)
 func ObtenerHistorialUsuario(ctx context.Context, residencialID string, usuarioID int64, fechaInicio, fechaFin string) ([]map[string]interface{}, error) {
 	query := `
 	SELECT latitud, longitud, registrado_en 
 	FROM historial_ubicaciones 
-	WHERE residencial_id = $1 AND usuario_id = $2 
+	WHERE residencial_id = $1 AND ($2 = 0 OR usuario_id = $2)
 	  AND registrado_en >= $3::TIMESTAMP AND registrado_en <= $4::TIMESTAMP
 	ORDER BY registrado_en ASC
 	`
