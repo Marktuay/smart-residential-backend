@@ -109,6 +109,8 @@ func main() {
 	// Usuarios
 	mux.Handle("GET /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarUsuariosHandler))))
 	mux.Handle("POST /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearUsuarioHandler))))
+	mux.Handle("PUT /api/v1/usuarios/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarUsuarioHandler))))
+	mux.Handle("DELETE /api/v1/usuarios/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUsuarioHandler))))
 
 	// Turnos
 	mux.Handle("GET /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarTurnosHandler))))

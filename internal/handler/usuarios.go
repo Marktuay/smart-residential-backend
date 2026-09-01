@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
@@ -82,4 +83,73 @@ func CrearUsuarioHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(nuevoUsuario)
+}
+
+// ActualizarUsuarioHandler modifica el correo, rol o clave de un usuario existente
+func ActualizarUsuarioHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "ID de usuario requerido", http.StatusBadRequest)
+		return
+	}
+
+	var id int64
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil || id == 0 {
+		http.Error(w, "ID inválido", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Email    string     `json:"email"`
+		Password string     `json:"password"`
+		Rol      model.Role `json:"rol"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Solicitud inválida", http.StatusBadRequest)
+		return
+	}
+
+	var passwordHash string
+	if req.Password != "" {
+		h, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Error al procesar la contraseña", http.StatusInternalServerError)
+			return
+		}
+		passwordHash = string(h)
+	}
+
+	if err := repository.ActualizarUsuario(id, req.Email, string(req.Rol), passwordHash); err != nil {
+		http.Error(w, "Error actualizando usuario: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"updated"}`))
+}
+
+// EliminarUsuarioHandler elimina un usuario
+func EliminarUsuarioHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "ID de usuario requerido", http.StatusBadRequest)
+		return
+	}
+
+	var id int64
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil || id == 0 {
+		http.Error(w, "ID inválido", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.EliminarUsuario(id); err != nil {
+		http.Error(w, "Error eliminando usuario: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"deleted"}`))
 }

@@ -65,3 +65,22 @@ func CrearUsuario(usuario *model.Usuario) error {
 
 	return err
 }
+
+// ActualizarUsuario actualiza los datos de un usuario (email, rol y opcionalmente password)
+func ActualizarUsuario(id int64, email, rol, passwordHash string) error {
+	if passwordHash != "" {
+		query := `UPDATE usuarios SET email = $1, rol = $2, password_hash = $3 WHERE id = $4`
+		_, err := db.DB.Exec(query, email, rol, passwordHash, id)
+		return err
+	}
+	query := `UPDATE usuarios SET email = $1, rol = $2 WHERE id = $3`
+	_, err := db.DB.Exec(query, email, rol, id)
+	return err
+}
+
+// EliminarUsuario elimina un usuario por su ID
+func EliminarUsuario(id int64) error {
+	query := `DELETE FROM usuarios WHERE id = $1`
+	_, err := db.DB.Exec(query, id)
+	return err
+}
