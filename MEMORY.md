@@ -15,6 +15,10 @@ Se ha completado la migración y despliegue en producción de la solución integ
 * **Backend:** Escrito en Go 1.22/1.26, ejecutado mediante Systemd (`smart-backend.service`) en GCP VM dedicada, conectado a Google Cloud SQL (PostgreSQL).
 * **Frontend:** Aplicación web moderna en Next.js 16 (TypeScript / Tailwind v4), administrada con PM2 (`smart-frontend`), desplegada en GCP VM dedicada.
 * **Seguridad y SSL:** Ambos subdominios cuentan con certificados SSL válidos y activos expedidos por Let's Encrypt (vía Certbot + Nginx), corriendo sobre HTTPS/HTTP2.
+* **ENTREGA 1 DESPLEGADA (Septiembre 2026):**
+  1. **Matriz GRID de Programación (`/programacion`):** Reemplazo de vista simple por tabla GRID por colaborador con turnos `TD`, `TN`, `EX` y modal de **Programación Masiva de Turnos** con antiduplicados.
+  2. **Bitácora de Incidentes (`/incidentes`):** Formulario con área **Drag & Drop para evidencia fotográfica**, filtro por estado y mapa de ubicación.
+  3. **Visitas & Notificaciones (`/visitas`):** Flexibilización de validación de cédula/pasaporte y modal de **Notificación Asistida vía WhatsApp (`wa.me`) y Push Web**.
 
 ---
 
