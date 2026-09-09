@@ -3,17 +3,19 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/model"
 )
 
-// ObtenerUsuarioPorEmail busca un usuario por su email para el login
+// ObtenerUsuarioPorEmail busca un usuario por su email/username para el login
 func ObtenerUsuarioPorEmail(ctx context.Context, email string) (*model.Usuario, error) {
+	cleanEmail := strings.TrimSpace(email)
 	query := `SELECT id, residencial_id, email, password_hash, rol, creado_en 
-			  FROM usuarios WHERE email = $1`
+			  FROM usuarios WHERE LOWER(TRIM(email)) = LOWER($1)`
 
 	var u model.Usuario
-	err := db.DB.QueryRowContext(ctx, query, email).Scan(
+	err := db.DB.QueryRowContext(ctx, query, cleanEmail).Scan(
 		&u.ID, &u.ResidencialID, &u.Email, &u.PasswordHash, &u.Rol, &u.CreadoEn,
 	)
 

@@ -31,6 +31,9 @@ func main() {
 	if err := repository.InitPushDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de suscripciones push: %v", err)
 	}
+	if err := repository.InicializarTablasFlota(context.Background()); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar las tablas de flota: %v", err)
+	}
 	handler.InitVAPIDKeys()
 
 	// Iniciar Garbage Collector (cada 24h) para el historial de ubicaciones
@@ -117,6 +120,16 @@ func main() {
 	mux.Handle("POST /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearTurnoHandler))))
 	mux.Handle("PUT /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarTurnoHandler))))
 	mux.Handle("DELETE /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarTurnoHandler))))
+
+	// Módulo Flota y Checklist 360
+	mux.Handle("GET /api/v1/flota/vehiculos", middleware.AuthMiddleware(http.HandlerFunc(handler.ListarVehiculosHandler)))
+	mux.Handle("POST /api/v1/flota/vehiculos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte)(http.HandlerFunc(handler.CrearVehiculoHandler))))
+	mux.Handle("GET /api/v1/flota/solicitudes", middleware.AuthMiddleware(http.HandlerFunc(handler.ListarSolicitudesHandler)))
+	mux.Handle("POST /api/v1/flota/solicitudes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleOperadorOperaciones)(http.HandlerFunc(handler.CrearSolicitudHandler))))
+	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/asignar", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte)(http.HandlerFunc(handler.AsignarSolicitudHandler))))
+	mux.Handle("POST /api/v1/flota/solicitudes/{id}/inspeccion", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleMecanicoTaller, model.RoleGuardiaGarita, model.RoleGuardia)(http.HandlerFunc(handler.RegistrarInspeccion360Handler))))
+	mux.Handle("GET /api/v1/flota/solicitudes/{id}/inspecciones", middleware.AuthMiddleware(http.HandlerFunc(handler.ObtenerInspeccionesHandler)))
+	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleAuditorFlota)(http.HandlerFunc(handler.TransicionEstadoHandler))))
 
 	// Envolver todo el enrutador con el middleware CORS
 	handlerConCORS := middleware.CorsMiddleware(mux)
