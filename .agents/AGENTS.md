@@ -62,3 +62,10 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 - **Arquitectura y Endpoints:** Expuestos los servicios REST bajo `/api/v1/turnos` en el backend en Go, con inserción asíncrona de auditorías (`CREAR_TURNO`, `ACTUALIZAR_TURNO`, `ELIMINAR_TURNO`).
 - **Interfaz (Calendario):** Implementada una cuadrícula de calendario mensual interactiva en `/programacion` con colores corporativos **NCS365** y modales interactivos para el flujo completo CRUD (Crear, Editar, Consultar y Cancelar).
 
+## 12. Control de Flota Pesada, Maquinaria Amarilla y Checklist 360
+- **Aislamiento y Tablas:** Tablas en PostgreSQL (`flota_vehiculos`, `solicitudes_flota`, `checklist_360_inspecciones`, `checklist_items_detalles`) con aislamiento estricto por `residencial_id = $1`.
+- **Roles RBAC del Módulo:** `OPERADOR_OPERACIONES` (apertura de solicitud y ruta), `GESTOR_TRANSPORTE` (asignación de unidad/chofer), `MECANICO_TALLER` (inspección 360 mecánica y horómetro/km), `GUARDIA_GARITA` (EPP de conductor y control de salida/llegada), `AUDITOR_FLOTA` (trazabilidad global), con bypass para `SISADMIN`.
+- **Máquina de Estados Finita (FSM):** Ciclo irreversible de 10 estados (`DRAFT` ➔ `ASIGNADA` ➔ `INSPECCION_TALLER_PENDIENTE` ➔ `APROBADA_TALLER` / `RECHAZADA_TALLER` ➔ `GARITA_SALIDA_PENDIENTE` ➔ `EN_TRANSITO` ➔ `GARITA_LLEGADA_PENDIENTE` ➔ `CHECKIN_CONFORME` / `CHECKIN_CON_OBSERVACION` ➔ `INSPECCION_CIERRE_TALLER` ➔ `CERRADO_FINALIZADO`).
+- **PWA e Interfaz de Usuario:** Formulario optimizado para tablets IP68 en `/flota/inspeccion` con captura fotográfica, dashboard en `/flota`, catálogo en `/flota/vehiculos`, y contenedor enmarcado con borde dorado (`#FACC15`) y badge `MÓDULO 360` en el `Sidebar.tsx`.
+
+
