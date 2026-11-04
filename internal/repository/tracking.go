@@ -45,15 +45,31 @@ func EliminarUbicacionActiva(ctx context.Context, usuarioID int64) error {
 	return err
 }
 
-// ObtenerUbicacionesActivas devuelve las ubicaciones de guardias que han transmitido en los últimos 3 minutos
+// ObtenerUbicacionesActivas devuelve las ubicaciones de guardias que han transmitido en los últimos 15 minutos
 func ObtenerUbicacionesActivas(ctx context.Context, residencialID string) ([]map[string]interface{}, error) {
-	query := `
-	SELECT r.usuario_id, u.email, r.latitud, r.longitud, r.actualizado_en 
-	FROM rastreo_ubicacion r
-	JOIN usuarios u ON r.usuario_id = u.id
-	WHERE r.residencial_id = $1 AND r.actualizado_en >= (CURRENT_TIMESTAMP - INTERVAL '3 minutes')
-	`
-	rows, err := db.DB.QueryContext(ctx, query, residencialID)
+	var query string
+	var args []interface{}
+
+	if residencialID == "" || residencialID == "GLOBAL" || residencialID == "TODOS" {
+		query = `
+		SELECT r.usuario_id, COALESCE(u.nombre_completo, u.email), r.latitud, r.longitud, r.actualizado_en, r.residencial_id
+		FROM rastreo_ubicacion r
+		JOIN usuarios u ON r.usuario_id = u.id
+		WHERE r.actualizado_en >= (CURRENT_TIMESTAMP - INTERVAL '15 minutes')
+		ORDER BY r.actualizado_en DESC
+		`
+	} else {
+		query = `
+		SELECT r.usuario_id, COALESCE(u.nombre_completo, u.email), r.latitud, r.longitud, r.actualizado_en, r.residencial_id
+		FROM rastreo_ubicacion r
+		JOIN usuarios u ON r.usuario_id = u.id
+		WHERE r.residencial_id = $1 AND r.actualizado_en >= (CURRENT_TIMESTAMP - INTERVAL '15 minutes')
+		ORDER BY r.actualizado_en DESC
+		`
+		args = append(args, residencialID)
+	}
+
+	rows, err := db.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -62,20 +78,22 @@ func ObtenerUbicacionesActivas(ctx context.Context, residencialID string) ([]map
 	var ubicaciones []map[string]interface{}
 	for rows.Next() {
 		var uid int64
-		var email string
+		var nombreOEmail string
 		var lat, lng float64
 		var actualizadoEn string
+		var resID string
 
-		if err := rows.Scan(&uid, &email, &lat, &lng, &actualizadoEn); err != nil {
+		if err := rows.Scan(&uid, &nombreOEmail, &lat, &lng, &actualizadoEn, &resID); err != nil {
 			return nil, err
 		}
 		
 		ubicaciones = append(ubicaciones, map[string]interface{}{
 			"usuario_id":     uid,
-			"email":          email,
+			"email":          nombreOEmail,
 			"latitud":        lat,
 			"longitud":       lng,
 			"actualizado_en": actualizadoEn,
+			"residencial_id": resID,
 		})
 	}
 

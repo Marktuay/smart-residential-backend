@@ -17,7 +17,7 @@ type RegistrarUbicacionRequest struct {
 
 // RegistrarUbicacionHandler recibe la ubicación bajo demanda del guardia
 func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
-	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
 
 	var req RegistrarUbicacionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -29,6 +29,18 @@ func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 	if usuarioID == 0 {
 		if ctxUID, ok := r.Context().Value(middleware.UsuarioIDKey).(int64); ok {
 			usuarioID = ctxUID
+		}
+	}
+
+	if usuarioID == 0 {
+		http.Error(w, "Usuario no identificado", http.StatusUnauthorized)
+		return
+	}
+
+	// Si residencialID es GLOBAL o vacío, obtener el residencial del usuario
+	if residencialID == "" || residencialID == "GLOBAL" {
+		if headerRes := r.Header.Get("X-Residencial-ID"); headerRes != "" && headerRes != "GLOBAL" {
+			residencialID = headerRes
 		}
 	}
 
@@ -60,7 +72,12 @@ func EliminarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 
 // ObtenerUbicacionesHandler devuelve las últimas ubicaciones registradas
 func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
-	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	// Permitir consultar por query param si es SISADMIN o si se solicita filtro específico
+	if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
+		residencialID = qResID
+	}
 
 	ubicaciones, err := repository.ObtenerUbicacionesActivas(r.Context(), residencialID)
 	if err != nil {
