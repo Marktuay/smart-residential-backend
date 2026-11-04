@@ -149,17 +149,35 @@ type Visita struct {
 	FechaSalida     *time.Time `json:"fecha_salida,omitempty"`
 }
 
+type ActividadDia struct {
+	Name    string `json:"name"`
+	Accesos int    `json:"accesos"`
+	Rondas  int    `json:"rondas"`
+}
+
+type NovedadReciente struct {
+	ID     int64  `json:"id"`
+	Tipo   string `json:"tipo"` // INCIDENTE, RONDA, VISITA
+	Titulo string `json:"titulo"`
+	Desc   string `json:"desc"`
+	Nivel  string `json:"nivel,omitempty"`
+	Fecha  string `json:"fecha"`
+	Time   string `json:"time"`
+}
+
 type DashboardStats struct {
-	Activos         int `json:"activos"`
-	Criticos        int `json:"criticos"`
-	ResueltosHoy    int `json:"resueltos_hoy"`
-	TotalHistorico  int `json:"total_historico"`
-	RondasHoy       int `json:"rondas_hoy"`
-	VisitasHoy      int `json:"visitas_hoy"`
-	Complejos       int `json:"complejos"`
-	CasasQR         int `json:"casas_qr"`
-	Residentes      int `json:"residentes"`
-	UsuariosActivos int `json:"usuarios_activos"`
+	Activos          int               `json:"activos"`
+	Criticos         int               `json:"criticos"`
+	ResueltosHoy     int               `json:"resueltos_hoy"`
+	TotalHistorico   int               `json:"total_historico"`
+	RondasHoy        int               `json:"rondas_hoy"`
+	VisitasHoy       int               `json:"visitas_hoy"`
+	Complejos        int               `json:"complejos"`
+	CasasQR          int               `json:"casas_qr"`
+	Residentes       int               `json:"residentes"`
+	UsuariosActivos  int               `json:"usuarios_activos"`
+	ActividadSemanal []ActividadDia    `json:"actividad_semanal"`
+	UltimasNovedades []NovedadReciente `json:"ultimas_novedades"`
 }
 
 type Casa struct {
