@@ -132,25 +132,51 @@ type DashboardStats struct {
 }
 
 type Casa struct {
-	ID                     int64  `json:"id"`
-	ResidencialID          string `json:"residencial_id"`
-	NumeroCasa             string `json:"numero_casa"`
-	Bloque                 string `json:"bloque"`
-	Estado                 string `json:"estado"`
-	TieneContratoSeguridad bool   `json:"tiene_contrato_seguridad"`
-	CreatedAt              string `json:"created_at"`
+	ID                     int64      `json:"id"`
+	ResidencialID          string     `json:"residencial_id"`
+	NumeroCasa             string     `json:"numero_casa"`
+	Bloque                 string     `json:"bloque"`
+	Estado                 string     `json:"estado"`
+	TieneContratoSeguridad bool       `json:"tiene_contrato_seguridad"`
+	ResidentesNombres      string     `json:"residentes_nombres,omitempty"`
+	ResidentesCount        int        `json:"residentes_count,omitempty"`
+	Activo                 bool       `json:"activo"`
+	CreatedAt              string     `json:"created_at"`
+	DeletedAt              *time.Time `json:"deleted_at,omitempty"`
+}
+
+type CasaPaginadaResponse struct {
+	Items      []Casa `json:"items"`
+	Total      int    `json:"total"`
+	Page       int    `json:"page"`
+	Limit      int    `json:"limit"`
+	TotalPages int    `json:"total_pages"`
 }
 
 type Residente struct {
-	ID            int64     `json:"id"`
-	ResidencialID string    `json:"residencial_id"`
-	CasaID        *int64    `json:"casa_id"`
-	NumeroCasa    string    `json:"numero_casa,omitempty"` // Campo extra para joins
-	Nombre        string    `json:"nombre"`
-	Telefono      string    `json:"telefono"`
-	Email         string    `json:"email"`
-	EsPropietario bool      `json:"es_propietario"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                 int64      `json:"id"`
+	ResidencialID      string     `json:"residencial_id"`
+	CasaID             *int64     `json:"casa_id,omitempty"`     // Para compatibilidad
+	NumeroCasa         string     `json:"numero_casa,omitempty"` // Para compatibilidad
+	Nombre             string     `json:"nombre"`
+	Cedula             string     `json:"cedula"`
+	Telefono           string     `json:"telefono"`
+	TelefonoEmergencia string     `json:"telefono_emergencia"`
+	Email              string     `json:"email"`
+	EsPropietario      bool       `json:"es_propietario"`
+	CasasAsignadasIDs  []int64    `json:"casas_asignadas_ids,omitempty"`
+	CasasDetalle       []Casa     `json:"casas_detalle,omitempty"`
+	Activo             bool       `json:"activo"`
+	CreatedAt          time.Time  `json:"created_at"`
+	DeletedAt          *time.Time `json:"deleted_at,omitempty"`
+}
+
+type ResidentePaginadoResponse struct {
+	Items      []Residente `json:"items"`
+	Total      int         `json:"total"`
+	Page       int         `json:"page"`
+	Limit      int         `json:"limit"`
+	TotalPages int         `json:"total_pages"`
 }
 
 type Incidente struct {

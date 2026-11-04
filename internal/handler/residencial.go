@@ -2,7 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
 	"smart-residential-backend/internal/repository"
@@ -50,17 +53,44 @@ func CrearResidencialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Opcional: Registrar auditoría
-	go repository.RegistrarAuditoriaAsync("SISADMIN", "SISADMIN", "CREAR_RESIDENCIAL", "NA", "Se creó el residencial "+residencial.ID)
+	go repository.RegistrarAuditoriaAsync("SISADMIN", "CREAR_RESIDENCIAL", "SISADMIN", middleware.GetClientIP(r), "Se creó el residencial "+residencial.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(residencial)
 }
 
+// ListarCasasHandler lista casas con paginación y búsqueda o completas para dropdowns
 func ListarCasasHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
 
+	q := r.URL.Query()
+	isPaginado := q.Get("paginado") == "true" || q.Get("page") != "" || q.Get("limit") != "" || q.Get("search") != ""
+
+	if isPaginado {
+		page, _ := strconv.Atoi(q.Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		limit, _ := strconv.Atoi(q.Get("limit"))
+		if limit < 1 {
+			limit = 10
+		}
+		search := q.Get("search")
+		bloque := q.Get("bloque")
+		estado := q.Get("estado")
+
+		resp, err := repository.ListarCasasPaginadas(residencialID, search, bloque, estado, page, limit)
+		if err != nil {
+			http.Error(w, "Error al obtener casas paginadas: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	// Modo legado / catálogo completo
 	casas, err := repository.ObtenerCasas(residencialID)
 	if err != nil {
 		http.Error(w, "Error al obtener casas", http.StatusInternalServerError)
@@ -82,28 +112,147 @@ func RegistrarCasaHandler(w http.ResponseWriter, r *http.Request) {
 
 	casa.ResidencialID = residencialID
 
+	if strings.TrimSpace(casa.NumeroCasa) == "" {
+		http.Error(w, "El número de casa es obligatorio", http.StatusBadRequest)
+		return
+	}
+
 	if casa.Estado == "" {
 		casa.Estado = "OCUPADA"
 	}
 
 	id, err := repository.RegistrarCasa(casa)
 	if err != nil {
-		http.Error(w, "Error al registrar la casa", http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "DUPLICATE_CASA") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, "Error al registrar la casa: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	casa.ID = id
 
-	// Registrar en auditoría
-	go repository.RegistrarAuditoriaAsync(residencialID, "REGISTRO_CASA", "user_mock", middleware.GetClientIP(r), "Se registró la casa " + casa.NumeroCasa)
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "CREAR_CASA", actor, middleware.GetClientIP(r), fmt.Sprintf("Se registró la casa %s (Bloque: %s)", casa.NumeroCasa, casa.Bloque))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(casa)
 }
 
+func ActualizarCasaHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "ID de casa inválido", http.StatusBadRequest)
+		return
+	}
+
+	var casa model.Casa
+	if err := json.NewDecoder(r.Body).Decode(&casa); err != nil {
+		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
+		return
+	}
+
+	casa.ID = id
+	casa.ResidencialID = residencialID
+
+	if strings.TrimSpace(casa.NumeroCasa) == "" {
+		http.Error(w, "El número de casa es obligatorio", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.ActualizarCasa(casa); err != nil {
+		if strings.Contains(err.Error(), "DUPLICATE_CASA") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, "Error al actualizar casa: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "ACTUALIZAR_CASA", actor, middleware.GetClientIP(r), fmt.Sprintf("Se actualizó la casa #%d (%s, Bloque: %s)", id, casa.NumeroCasa, casa.Bloque))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Casa actualizada correctamente",
+		"casa":    casa,
+	})
+}
+
+func EliminarCasaHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "ID de casa inválido", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.EliminarCasa(id, residencialID); err != nil {
+		http.Error(w, "Error al eliminar casa: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "ELIMINAR_CASA", actor, middleware.GetClientIP(r), fmt.Sprintf("Se eliminó (SoftDelete) la casa ID #%d", id))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Casa eliminada correctamente",
+	})
+}
+
+// ListarResidentesHandler lista residentes con paginación y búsqueda
 func ListarResidentesHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	q := r.URL.Query()
+	isPaginado := q.Get("paginado") == "true" || q.Get("page") != "" || q.Get("limit") != "" || q.Get("search") != "" || q.Get("es_propietario") != ""
+
+	if isPaginado {
+		page, _ := strconv.Atoi(q.Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		limit, _ := strconv.Atoi(q.Get("limit"))
+		if limit < 1 {
+			limit = 10
+		}
+		search := q.Get("search")
+
+		var esPropietario *bool
+		if pStr := q.Get("es_propietario"); pStr != "" {
+			val := (pStr == "true" || pStr == "1")
+			esPropietario = &val
+		}
+
+		resp, err := repository.ListarResidentesPaginados(residencialID, search, esPropietario, page, limit)
+		if err != nil {
+			http.Error(w, "Error al obtener residentes paginados: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
 
 	residentes, err := repository.ObtenerResidentes(residencialID)
 	if err != nil {
@@ -126,20 +275,108 @@ func RegistrarResidenteHandler(w http.ResponseWriter, r *http.Request) {
 
 	residente.ResidencialID = residencialID
 
+	if strings.TrimSpace(residente.Nombre) == "" {
+		http.Error(w, "El nombre del residente es obligatorio", http.StatusBadRequest)
+		return
+	}
+
 	id, err := repository.RegistrarResidente(residente)
 	if err != nil {
-		http.Error(w, "Error al registrar el residente", http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "DUPLICATE_RESIDENTE") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, "Error al registrar el residente: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	residente.ID = id
 
-	// Registrar en auditoría
-	go repository.RegistrarAuditoriaAsync(residencialID, "REGISTRO_RESIDENTE", "user_mock", middleware.GetClientIP(r), "Se registró el residente " + residente.Nombre)
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "CREAR_RESIDENTE", actor, middleware.GetClientIP(r), fmt.Sprintf("Se registró el residente %s (Cédula: %s)", residente.Nombre, residente.Cedula))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(residente)
+}
+
+func ActualizarResidenteHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "ID de residente inválido", http.StatusBadRequest)
+		return
+	}
+
+	var residente model.Residente
+	if err := json.NewDecoder(r.Body).Decode(&residente); err != nil {
+		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
+		return
+	}
+
+	residente.ID = id
+	residente.ResidencialID = residencialID
+
+	if strings.TrimSpace(residente.Nombre) == "" {
+		http.Error(w, "El nombre del residente es obligatorio", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.ActualizarResidente(residente); err != nil {
+		if strings.Contains(err.Error(), "DUPLICATE_RESIDENTE") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, "Error al actualizar residente: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "ACTUALIZAR_RESIDENTE", actor, middleware.GetClientIP(r), fmt.Sprintf("Se actualizó el residente #%d (%s, Cédula: %s)", id, residente.Nombre, residente.Cedula))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"message":   "Residente actualizado correctamente",
+		"residente": residente,
+	})
+}
+
+func EliminarResidenteHandler(w http.ResponseWriter, r *http.Request) {
+	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "ID de residente inválido", http.StatusBadRequest)
+		return
+	}
+
+	if err := repository.EliminarResidente(id, residencialID); err != nil {
+		http.Error(w, "Error al eliminar residente: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "ADMIN"
+	if uID := r.Context().Value(middleware.UsuarioIDKey); uID != nil {
+		actor = fmt.Sprintf("User_%v", uID)
+	}
+
+	go repository.RegistrarAuditoriaAsync(residencialID, "ELIMINAR_RESIDENTE", actor, middleware.GetClientIP(r), fmt.Sprintf("Se eliminó (SoftDelete) el residente ID #%d", id))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Residente eliminado correctamente",
+	})
 }
 
 func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +397,6 @@ func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validaciones básicas
 	if req.ZoomDefecto < 1 || req.ZoomDefecto > 22 {
 		req.ZoomDefecto = 13
 	}
@@ -187,7 +423,6 @@ func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Registrar en auditoría
 	go repository.RegistrarAuditoriaAsync(residencialID, "ACTUALIZAR_CONFIGURACION", "user_mock", middleware.GetClientIP(r), "Se actualizó la configuración del residencial")
 
 	w.Header().Set("Content-Type", "application/json")
