@@ -81,27 +81,58 @@ type PuntoQR struct {
 	Latitud                float64 `json:"latitud,omitempty"`
 	Longitud               float64 `json:"longitud,omitempty"`
 	NumeroCasa             string  `json:"numero_casa,omitempty"`
+	Bloque                 string  `json:"bloque,omitempty"`
 	ResidenteNombre        string  `json:"residente_nombre,omitempty"`
 	TieneContratoSeguridad bool    `json:"tiene_contrato_seguridad"`
+	UltimaMarcacion        string  `json:"ultima_marcacion,omitempty"`
+	TotalMarcaciones       int     `json:"total_marcaciones,omitempty"`
+	CreatedAt              string  `json:"created_at,omitempty"`
 }
 
 type ProgramaRonda struct {
-	ID            int64   `json:"id"`
-	ResidencialID string  `json:"residencial_id"`
-	Nombre        string  `json:"nombre"`
-	HoraInicio    string  `json:"hora_inicio"`
-	HoraFin       string  `json:"hora_fin"`
-	Recurrencia   string  `json:"recurrencia"`
-	Puntos        []int64 `json:"puntos,omitempty"` // IDs de PuntosQR
+	ID             int64     `json:"id"`
+	ResidencialID  string    `json:"residencial_id"`
+	Nombre         string    `json:"nombre"`
+	HoraInicio     string    `json:"hora_inicio"`
+	HoraFin        string    `json:"hora_fin"`
+	Recurrencia    string    `json:"recurrencia"`
+	ToleranciaMins int       `json:"tolerancia_mins"`
+	Puntos         []int64   `json:"puntos,omitempty"` // IDs de PuntosQR
+	PuntosDetalle  []PuntoQR `json:"puntos_detalle,omitempty"`
+	TotalPuntos    int       `json:"total_puntos"`
+	CreatedAt      string    `json:"created_at,omitempty"`
 }
 
 type AsignacionRonda struct {
-	ID            int64  `json:"id"`
-	ResidencialID string `json:"residencial_id"`
-	ProgramaID    int64  `json:"programa_id"`
-	UsuarioID     int64  `json:"usuario_id"`
-	Fecha         string `json:"fecha"`
-	Estado        string `json:"estado"`
+	ID                     int64   `json:"id"`
+	ResidencialID          string  `json:"residencial_id"`
+	ProgramaID             int64   `json:"programa_id"`
+	ProgramaNombre         string  `json:"programa_nombre,omitempty"`
+	HoraInicio             string  `json:"hora_inicio,omitempty"`
+	HoraFin                string  `json:"hora_fin,omitempty"`
+	UsuarioID              int64   `json:"usuario_id"`
+	GuardiaNombre          string  `json:"guardia_nombre,omitempty"`
+	Fecha                  string  `json:"fecha"`
+	Estado                 string  `json:"estado"`
+	PuntosCompletados      int     `json:"puntos_completados"`
+	PuntosTotal            int     `json:"puntos_total"`
+	PorcentajeCumplimiento float64 `json:"porcentaje_cumplimiento"`
+	CreatedAt              string  `json:"created_at,omitempty"`
+}
+
+type MarcacionRonda struct {
+	ID                int64     `json:"id"`
+	ResidencialID     string    `json:"residencial_id"`
+	AsignacionRondaID *int64    `json:"asignacion_ronda_id,omitempty"`
+	PuntoQRID         int64     `json:"punto_qr_id"`
+	PuntoNombre       string    `json:"punto_nombre,omitempty"`
+	NumeroCasa        string    `json:"numero_casa,omitempty"`
+	GuardiaID         int64     `json:"guardia_id"`
+	GuardiaNombre     string    `json:"guardia_nombre,omitempty"`
+	FechaHora         time.Time `json:"fecha_hora"`
+	Latitud           float64   `json:"latitud,omitempty"`
+	Longitud          float64   `json:"longitud,omitempty"`
+	Observacion       string    `json:"observacion,omitempty"`
 }
 
 type Visita struct {

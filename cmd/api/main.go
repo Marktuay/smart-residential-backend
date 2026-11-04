@@ -31,6 +31,12 @@ func main() {
 	if err := repository.InitTurnosDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de turnos: %v", err)
 	}
+	if err := repository.InitPuntosQRDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar la tabla de puntos QR: %v", err)
+	}
+	if err := repository.InitRondasDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar las tablas de rondas: %v", err)
+	}
 	if err := repository.InitPushDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de suscripciones push: %v", err)
 	}
@@ -80,12 +86,17 @@ func main() {
 	// Puntos QR
 	mux.Handle("GET /api/v1/puntos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor, model.RoleGuardia)(http.HandlerFunc(handler.ListarPuntosQRHandler))))
 	mux.Handle("POST /api/v1/puntos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.CrearPuntoQRHandler))))
+	mux.Handle("PUT /api/v1/puntos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.ActualizarPuntoQRHandler))))
+	mux.Handle("DELETE /api/v1/puntos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.EliminarPuntoQRHandler))))
 
 	// Rondas
 	mux.Handle("GET /api/v1/rondas/programas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor, model.RoleGuardia)(http.HandlerFunc(handler.ListarProgramasRondasHandler))))
 	mux.Handle("POST /api/v1/rondas/programas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.CrearProgramaRondaHandler))))
+	mux.Handle("DELETE /api/v1/rondas/programas/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.EliminarProgramaRondaHandler))))
 	mux.Handle("GET /api/v1/rondas/asignaciones", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor, model.RoleGuardia)(http.HandlerFunc(handler.ListarAsignacionesRondasHandler))))
 	mux.Handle("POST /api/v1/rondas/asignaciones", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor)(http.HandlerFunc(handler.CrearAsignacionRondaHandler))))
+	mux.Handle("POST /api/v1/rondas/marcacion", middleware.AuthMiddleware(http.HandlerFunc(handler.RegistrarMarcacionRondaHandler)))
+	mux.Handle("GET /api/v1/rondas/marcaciones", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSupervisor, model.RoleGuardia)(http.HandlerFunc(handler.ListarMarcacionesRondasHandler))))
 
 	// Visitas
 	mux.Handle("GET /api/v1/visitas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleGuardia)(http.HandlerFunc(handler.ListarVisitasHandler))))
