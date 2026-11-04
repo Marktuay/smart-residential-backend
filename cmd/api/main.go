@@ -120,11 +120,14 @@ func main() {
 	mux.Handle("PATCH /api/v1/usuarios/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CambiarEstadoUsuarioHandler))))
 	mux.Handle("DELETE /api/v1/usuarios/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUsuarioHandler))))
 
-	// Turnos
-	mux.Handle("GET /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarTurnosHandler))))
-	mux.Handle("POST /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearTurnoHandler))))
-	mux.Handle("PUT /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarTurnoHandler))))
-	mux.Handle("DELETE /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarTurnoHandler))))
+	// Turnos y Programación
+	mux.Handle("GET /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor, model.RoleGuardia)(http.HandlerFunc(handler.ListarTurnosHandler))))
+	mux.Handle("POST /api/v1/turnos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.CrearTurnoHandler))))
+	mux.Handle("POST /api/v1/turnos/masivo", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ProgramacionMasivaHandler))))
+	mux.Handle("POST /api/v1/turnos/{id}/asistencia", middleware.AuthMiddleware(http.HandlerFunc(handler.MarcarAsistenciaHandler)))
+	mux.Handle("GET /api/v1/turnos/auditoria", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ListarAuditoriaTurnosHandler))))
+	mux.Handle("PUT /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ActualizarTurnoHandler))))
+	mux.Handle("DELETE /api/v1/turnos/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.EliminarTurnoHandler))))
 
 	// Módulo Flota y Checklist 360
 	mux.Handle("GET /api/v1/flota/vehiculos", middleware.AuthMiddleware(http.HandlerFunc(handler.ListarVehiculosHandler)))

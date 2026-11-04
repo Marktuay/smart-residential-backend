@@ -167,16 +167,42 @@ type Incidente struct {
 }
 
 type Turno struct {
-	ID            int64  `json:"id"`
-	ResidencialID string `json:"residencial_id"`
-	GuardiaID     int64  `json:"guardia_id"`
-	GuardiaEmail  string `json:"guardia_email,omitempty"`
-	Fecha         string `json:"fecha"`          // YYYY-MM-DD
-	HoraInicio    string `json:"hora_inicio"`    // HH:MM
-	HoraFin       string `json:"hora_fin"`       // HH:MM
-	Descripcion   string `json:"descripcion"`
-	Ubicacion     string `json:"ubicacion"`
-	Estado        string `json:"estado"`         // PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO
+	ID             int64      `json:"id"`
+	ResidencialID  string     `json:"residencial_id"`
+	GuardiaID      int64      `json:"guardia_id"`
+	GuardiaNombre  string     `json:"guardia_nombre,omitempty"`
+	GuardiaEmail   string     `json:"guardia_email,omitempty"`
+	GuardiaCedula  string     `json:"guardia_cedula,omitempty"`
+	Fecha          string     `json:"fecha"`          // YYYY-MM-DD
+	HoraInicio     string     `json:"hora_inicio"`    // HH:MM
+	HoraFin        string     `json:"hora_fin"`       // HH:MM
+	Horas          float64    `json:"horas"`          // Duración calculada en horas
+	Descripcion    string     `json:"descripcion"`
+	Ubicacion      string     `json:"ubicacion"`
+	Estado         string     `json:"estado"`         // PROGRAMADO, EN_CURSO, COMPLETADO, AUSENTE, CANCELADO
+	Asistencia     string     `json:"asistencia"`     // PENDIENTE, PRESENTE, TARDANZA, AUSENTE
+	MarcadoEntrada *time.Time `json:"marcado_entrada,omitempty"`
+	MarcadoSalida  *time.Time `json:"marcado_salida,omitempty"`
+	CreadoPor      string     `json:"creado_por,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type ProgramacionMasivaRequest struct {
+	GuardiaIDs []int64  `json:"guardia_ids"`
+	FechaDesde string   `json:"fecha_desde"` // YYYY-MM-DD
+	FechaHasta string   `json:"fecha_hasta"` // YYYY-MM-DD
+	HoraInicio string   `json:"hora_inicio"` // HH:MM
+	HoraFin    string   `json:"hora_fin"`    // HH:MM
+	TipoTurno  string   `json:"tipo_turno"`  // TD, TN, EXTRA
+	Ubicacion  string   `json:"ubicacion"`
+	Notas      string   `json:"notas"`
+	DiasSemana []int    `json:"dias_semana"` // 0=Domingo, 1=Lunes, ... opcional
+}
+
+type ProgramacionMasivaResponse struct {
+	Creados    int      `json:"creados"`
+	Conflictos int      `json:"conflictos"`
+	Mensajes   []string `json:"mensajes"`
 }
 
 type SuscripcionPush struct {
