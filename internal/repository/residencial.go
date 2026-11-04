@@ -154,6 +154,13 @@ func CrearResidencial(ctx context.Context, r *model.Residencial) error {
 	return err
 }
 
+// ObtenerPrimerResidencialID retorna el primer ID de residencial disponible en la base de datos
+func ObtenerPrimerResidencialID(ctx context.Context) (string, error) {
+	var id string
+	err := db.DB.QueryRowContext(ctx, "SELECT id FROM residenciales ORDER BY id ASC LIMIT 1").Scan(&id)
+	return id, err
+}
+
 func ObtenerResidencial(id string) (*model.Residencial, error) {
 	query := `
 		SELECT id, nombre, direccion, latitud_centro, longitud_centro, zoom_defecto, 

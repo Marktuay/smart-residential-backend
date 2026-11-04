@@ -12,12 +12,30 @@ import (
 )
 
 func ObtenerResidencialHandler(w http.ResponseWriter, r *http.Request) {
-	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	if qID := r.URL.Query().Get("residencial_id"); qID != "" {
+		residencialID = qID
+	}
+
+	if residencialID == "" || residencialID == "GLOBAL" {
+		primerID, err := repository.ObtenerPrimerResidencialID(r.Context())
+		if err == nil && primerID != "" {
+			residencialID = primerID
+		}
+	}
 
 	residencial, err := repository.ObtenerResidencial(residencialID)
 	if err != nil {
-		http.Error(w, "Error al obtener residencial", http.StatusInternalServerError)
-		return
+		// Fallback al primer residencial registrado si el ID del contexto no existe
+		primerID, errPrimer := repository.ObtenerPrimerResidencialID(r.Context())
+		if errPrimer == nil && primerID != "" && primerID != residencialID {
+			residencial, err = repository.ObtenerResidencial(primerID)
+		}
+		if err != nil {
+			http.Error(w, "No se encontró configuración para el residencial solicitado", http.StatusNotFound)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -380,9 +398,10 @@ func EliminarResidenteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
-	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
 
 	var req struct {
+		ID                    string  `json:"id"`
 		LatitudCentro         float64 `json:"latitud_centro"`
 		LongitudCentro        float64 `json:"longitud_centro"`
 		ZoomDefecto           int     `json:"zoom_defecto"`
@@ -395,6 +414,19 @@ func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Cuerpo de solicitud inválido", http.StatusBadRequest)
 		return
+	}
+
+	if qID := r.URL.Query().Get("residencial_id"); qID != "" {
+		residencialID = qID
+	} else if req.ID != "" && req.ID != "GLOBAL" {
+		residencialID = req.ID
+	}
+
+	if residencialID == "" || residencialID == "GLOBAL" {
+		primerID, err := repository.ObtenerPrimerResidencialID(r.Context())
+		if err == nil && primerID != "" {
+			residencialID = primerID
+		}
 	}
 
 	if req.ZoomDefecto < 1 || req.ZoomDefecto > 22 {
