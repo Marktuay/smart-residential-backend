@@ -2,6 +2,11 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
 	"smart-residential-backend/internal/db"
 )
 
@@ -100,17 +105,81 @@ func ObtenerUbicacionesActivas(ctx context.Context, residencialID string) ([]map
 	return ubicaciones, nil
 }
 
+// ParseFechaFiltro analiza fechas en formatos RFC3339 o locales (asumiendo UTC-6 / America/Managua si no tienen zona horaria)
+func ParseFechaFiltro(str string) (time.Time, error) {
+	str = strings.TrimSpace(str)
+	if str == "" {
+		return time.Time{}, errors.New("fecha vacía")
+	}
+
+	// 1. Si contiene offset (+ / -) o Z al final, parsear como RFC3339 / ISO
+	layoutsWithTZ := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05-07:00",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04-07:00",
+	}
+	for _, layout := range layoutsWithTZ {
+		if t, err := time.Parse(layout, str); err == nil {
+			return t.UTC(), nil
+		}
+	}
+
+	// 2. Si no especifica zona horaria (ej: "2026-11-04 15:00:00" o "2026-11-04T15:00:00"),
+	// asumir la hora local de Nicaragua (America/Managua, UTC-6) y convertir a UTC
+	loc, err := time.LoadLocation("America/Managua")
+	if err != nil {
+		loc = time.FixedZone("CST", -6*3600)
+	}
+
+	layoutsLocal := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+	}
+	for _, layout := range layoutsLocal {
+		if t, err := time.ParseInLocation(layout, str, loc); err == nil {
+			return t.UTC(), nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("formato de fecha no reconocido: %s", str)
+}
+
 // ObtenerHistorialUsuario obtiene el historial de ubicaciones de un guardia específico o de todos (si usuarioID es 0)
 func ObtenerHistorialUsuario(ctx context.Context, residencialID string, usuarioID int64, fechaInicio, fechaFin string) ([]map[string]interface{}, error) {
-	query := `
-	SELECT latitud, longitud, registrado_en 
-	FROM historial_ubicaciones 
-	WHERE (residencial_id = $1 OR $1 = 'GLOBAL' OR $1 = '' OR $1 = 'TODOS') 
-	  AND ($2 = 0 OR usuario_id = $2)
-	  AND registrado_en >= $3::TIMESTAMP AND registrado_en <= $4::TIMESTAMP
-	ORDER BY registrado_en ASC
-	`
-	rows, err := db.DB.QueryContext(ctx, query, residencialID, usuarioID, fechaInicio, fechaFin)
+	tInicio, errInicio := ParseFechaFiltro(fechaInicio)
+	tFin, errFin := ParseFechaFiltro(fechaFin)
+
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if errInicio == nil && errFin == nil {
+		query = `
+		SELECT latitud, longitud, registrado_en 
+		FROM historial_ubicaciones 
+		WHERE (residencial_id = $1 OR $1 = 'GLOBAL' OR $1 = '' OR $1 = 'TODOS') 
+		  AND ($2 = 0 OR usuario_id = $2)
+		  AND registrado_en >= $3 AND registrado_en <= $4
+		ORDER BY registrado_en ASC
+		`
+		rows, err = db.DB.QueryContext(ctx, query, residencialID, usuarioID, tInicio, tFin)
+	} else {
+		query = `
+		SELECT latitud, longitud, registrado_en 
+		FROM historial_ubicaciones 
+		WHERE (residencial_id = $1 OR $1 = 'GLOBAL' OR $1 = '' OR $1 = 'TODOS') 
+		  AND ($2 = 0 OR usuario_id = $2)
+		  AND registrado_en >= $3::TIMESTAMP AND registrado_en <= $4::TIMESTAMP
+		ORDER BY registrado_en ASC
+		`
+		rows, err = db.DB.QueryContext(ctx, query, residencialID, usuarioID, fechaInicio, fechaFin)
+	}
+
 	if err != nil {
 		return nil, err
 	}
