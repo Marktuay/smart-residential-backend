@@ -40,12 +40,25 @@ type AuditLog struct {
 }
 
 type Usuario struct {
-	ID            int64     `json:"id"`
-	ResidencialID string    `json:"residencial_id"`
-	Email         string    `json:"email"`
-	PasswordHash  string    `json:"-"` // No se expone en JSON
-	Rol           Role      `json:"rol"`
-	CreadoEn      time.Time `json:"creado_en"`
+	ID             int64      `json:"id"`
+	ResidencialID  string     `json:"residencial_id"`
+	Email          string     `json:"email"`
+	NombreCompleto string     `json:"nombre_completo"`
+	Telefono       string     `json:"telefono"`
+	Cedula         string     `json:"cedula"`
+	PasswordHash   string     `json:"-"` // No se expone en JSON
+	Rol            Role       `json:"rol"`
+	Activo         bool       `json:"activo"`
+	CreadoEn       time.Time  `json:"creado_en"`
+	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
+}
+
+type UsuarioPaginadoResponse struct {
+	Items      []Usuario `json:"items"`
+	Total      int       `json:"total"`
+	Page       int       `json:"page"`
+	Limit      int       `json:"limit"`
+	TotalPages int       `json:"total_pages"`
 }
 
 type LoginRequest struct {

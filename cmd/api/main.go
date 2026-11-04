@@ -19,6 +19,9 @@ func main() {
 	defer db.DB.Close()
 
 	// Inicializar tablas necesarias (si no existen)
+	if err := repository.InitUsuariosDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar columnas de usuarios: %v", err)
+	}
 	if err := repository.InitResidencialesDB(); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar la tabla de residenciales: %v", err)
 	}
@@ -109,10 +112,12 @@ func main() {
 	mux.Handle("POST /api/v1/casas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarCasaHandler))))
 	mux.Handle("GET /api/v1/residentes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarResidentesHandler))))
 	mux.Handle("POST /api/v1/residentes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.RegistrarResidenteHandler))))
-	// Usuarios
+	// Usuarios y Gestión de Personal
 	mux.Handle("GET /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarUsuariosHandler))))
 	mux.Handle("POST /api/v1/usuarios", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearUsuarioHandler))))
+	mux.Handle("POST /api/v1/usuarios/bulk-csv", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CargaMasivaUsuariosHandler))))
 	mux.Handle("PUT /api/v1/usuarios/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarUsuarioHandler))))
+	mux.Handle("PATCH /api/v1/usuarios/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CambiarEstadoUsuarioHandler))))
 	mux.Handle("DELETE /api/v1/usuarios/{id}", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EliminarUsuarioHandler))))
 
 	// Turnos
