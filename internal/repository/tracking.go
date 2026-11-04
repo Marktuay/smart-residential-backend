@@ -105,7 +105,8 @@ func ObtenerHistorialUsuario(ctx context.Context, residencialID string, usuarioI
 	query := `
 	SELECT latitud, longitud, registrado_en 
 	FROM historial_ubicaciones 
-	WHERE residencial_id = $1 AND ($2 = 0 OR usuario_id = $2)
+	WHERE (residencial_id = $1 OR $1 = 'GLOBAL' OR $1 = '' OR $1 = 'TODOS') 
+	  AND ($2 = 0 OR usuario_id = $2)
 	  AND registrado_en >= $3::TIMESTAMP AND registrado_en <= $4::TIMESTAMP
 	ORDER BY registrado_en ASC
 	`

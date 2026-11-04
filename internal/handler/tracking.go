@@ -95,7 +95,11 @@ func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
 
 // ObtenerHistorialTrackingHandler devuelve el historial de ubicaciones de un guardia en un rango de fechas
 func ObtenerHistorialTrackingHandler(w http.ResponseWriter, r *http.Request) {
-	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+	
+	if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
+		residencialID = qResID
+	}
 	
 	// Extraer parámetros de la URL
 	usuarioIDStr := r.URL.Query().Get("usuario_id")
