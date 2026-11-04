@@ -104,6 +104,13 @@ func ListarVehiculosFlota(ctx context.Context, residencialID string) ([]model.Ve
 
 // CrearVehiculoFlota inserta una nueva unidad en la base de datos
 func CrearVehiculoFlota(ctx context.Context, v *model.VehiculoFlota) error {
+	var count int
+	checkQuery := `SELECT count(*) FROM flota_vehiculos WHERE residencial_id = $1 AND (UPPER(codigo_unidad) = UPPER($2) OR ($3 != '' AND UPPER(placa) = UPPER($3)))`
+	_ = db.DB.QueryRowContext(ctx, checkQuery, v.ResidencialID, v.CodigoUnidad, v.Placa).Scan(&count)
+	if count > 0 {
+		return fmt.Errorf("ya existe una unidad registrada con ese código o placa")
+	}
+
 	query := `
 		INSERT INTO flota_vehiculos (residencial_id, codigo_unidad, tipo_unidad, marca_modelo, placa, qr_code, horometro_km_actual, estado)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

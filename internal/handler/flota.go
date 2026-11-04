@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
@@ -61,6 +62,12 @@ func CrearVehiculoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := repository.CrearVehiculoFlota(r.Context(), &v); err != nil {
+		if strings.Contains(err.Error(), "ya existe") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 		http.Error(w, "Error al crear vehículo de flota: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

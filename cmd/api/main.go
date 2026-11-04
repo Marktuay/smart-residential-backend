@@ -146,13 +146,13 @@ func main() {
 
 	// Módulo Flota y Checklist 360
 	mux.Handle("GET /api/v1/flota/vehiculos", middleware.AuthMiddleware(http.HandlerFunc(handler.ListarVehiculosHandler)))
-	mux.Handle("POST /api/v1/flota/vehiculos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte)(http.HandlerFunc(handler.CrearVehiculoHandler))))
+	mux.Handle("POST /api/v1/flota/vehiculos", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleSupervisor)(http.HandlerFunc(handler.CrearVehiculoHandler))))
 	mux.Handle("GET /api/v1/flota/solicitudes", middleware.AuthMiddleware(http.HandlerFunc(handler.ListarSolicitudesHandler)))
-	mux.Handle("POST /api/v1/flota/solicitudes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleOperadorOperaciones)(http.HandlerFunc(handler.CrearSolicitudHandler))))
-	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/asignar", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte)(http.HandlerFunc(handler.AsignarSolicitudHandler))))
-	mux.Handle("POST /api/v1/flota/solicitudes/{id}/inspeccion", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleMecanicoTaller, model.RoleGuardiaGarita, model.RoleGuardia)(http.HandlerFunc(handler.RegistrarInspeccion360Handler))))
+	mux.Handle("POST /api/v1/flota/solicitudes", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleOperadorOperaciones, model.RoleSupervisor, model.RoleGestorTransporte)(http.HandlerFunc(handler.CrearSolicitudHandler))))
+	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/asignar", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleSupervisor)(http.HandlerFunc(handler.AsignarSolicitudHandler))))
+	mux.Handle("POST /api/v1/flota/solicitudes/{id}/inspeccion", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleMecanicoTaller, model.RoleGuardiaGarita, model.RoleGuardia, model.RoleSupervisor)(http.HandlerFunc(handler.RegistrarInspeccion360Handler))))
 	mux.Handle("GET /api/v1/flota/solicitudes/{id}/inspecciones", middleware.AuthMiddleware(http.HandlerFunc(handler.ObtenerInspeccionesHandler)))
-	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleAuditorFlota)(http.HandlerFunc(handler.TransicionEstadoHandler))))
+	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleAuditorFlota, model.RoleSupervisor)(http.HandlerFunc(handler.TransicionEstadoHandler))))
 
 	// Envolver todo el enrutador con el middleware CORS
 	handlerConCORS := middleware.CorsMiddleware(mux)
