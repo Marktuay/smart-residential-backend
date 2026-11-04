@@ -19,9 +19,11 @@ func InitIncidentesDB() error {
 		nivel_gravedad VARCHAR(20) NOT NULL,
 		estado VARCHAR(20) NOT NULL DEFAULT 'ABIERTO',
 		evidencia_url TEXT,
+		ubicacion VARCHAR(150),
 		fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
 		fecha_resolucion TIMESTAMP
 	);
+	ALTER TABLE incidentes ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(150);
 	CREATE INDEX IF NOT EXISTS idx_incidentes_residencial ON incidentes(residencial_id);
 	`
 	_, err := db.DB.Exec(query)
@@ -30,8 +32,8 @@ func InitIncidentesDB() error {
 
 func CrearIncidente(ctx context.Context, incidente *model.Incidente) error {
 	query := `
-		INSERT INTO incidentes (residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, evidencia_url, fecha_creacion)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO incidentes (residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, evidencia_url, ubicacion, fecha_creacion)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 	incidente.FechaCreacion = time.Now()
@@ -47,6 +49,7 @@ func CrearIncidente(ctx context.Context, incidente *model.Incidente) error {
 		incidente.NivelGravedad,
 		incidente.Estado,
 		incidente.EvidenciaURL,
+		incidente.Ubicacion,
 		incidente.FechaCreacion,
 	).Scan(&incidente.ID)
 	
@@ -68,7 +71,7 @@ func CrearIncidente(ctx context.Context, incidente *model.Incidente) error {
 
 func ObtenerIncidentes(ctx context.Context, residencialID string) ([]model.Incidente, error) {
 	query := `
-		SELECT id, residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, evidencia_url, fecha_creacion, fecha_resolucion
+		SELECT id, residencial_id, reportado_por, tipo, descripcion, nivel_gravedad, estado, COALESCE(evidencia_url, ''), COALESCE(ubicacion, ''), fecha_creacion, fecha_resolucion
 		FROM incidentes
 		WHERE residencial_id = $1
 		ORDER BY fecha_creacion DESC
@@ -91,6 +94,7 @@ func ObtenerIncidentes(ctx context.Context, residencialID string) ([]model.Incid
 			&i.NivelGravedad,
 			&i.Estado,
 			&i.EvidenciaURL,
+			&i.Ubicacion,
 			&i.FechaCreacion,
 			&i.FechaResolucion,
 		); err != nil {

@@ -237,6 +237,7 @@ type Incidente struct {
 	NivelGravedad   string     `json:"nivel_gravedad"`
 	Estado          string     `json:"estado"`
 	EvidenciaURL    string     `json:"evidencia_url"`
+	Ubicacion       string     `json:"ubicacion,omitempty"`
 	FechaCreacion   time.Time  `json:"fecha_creacion"`
 	FechaResolucion *time.Time `json:"fecha_resolucion,omitempty"`
 }
