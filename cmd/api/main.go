@@ -115,8 +115,8 @@ func main() {
 	mux.Handle("POST /api/v1/push/send", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EnviarNotificacionHandler))))
 
 	// Residencial
-	mux.Handle("GET /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.ListarResidencialesHandler))))
-	mux.Handle("POST /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.CrearResidencialHandler))))
+	mux.Handle("GET /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ListarResidencialesHandler))))
+	mux.Handle("POST /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearResidencialHandler))))
 	mux.Handle("GET /api/v1/residencial/info", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerResidencialHandler))))
 	mux.Handle("PUT /api/v1/residencial/config", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarConfiguracionHandler))))
 	mux.Handle("GET /api/v1/casas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarCasasHandler))))
