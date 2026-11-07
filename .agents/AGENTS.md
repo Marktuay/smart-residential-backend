@@ -52,10 +52,12 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 - **Gestión de Supervisores:** Se agregó la pantalla de Supervisores (`/supervisores`) al menú lateral de Operaciones, para tener control sobre el personal.
 - **Relación QR - Casas:** Los `puntos_qr` de las rondas de seguridad ahora pueden estar asociados opcionalmente a una `Casa`. La tabla `casas` posee el flag `tiene_contrato_seguridad`. En el frontend, las pantallas de `/rondas` y `/puntos-qr` muestran detalles sobre el propietario y un icono distintivo de escudo (verde para contrato activo, rojo para inactivo) que ayuda al guardia durante su recorrido. Se integró el formulario de asociación al crear puntos de control en ambas vistas.
 
-## 10. Jerarquía de Instalaciones y Mapas (Gestión SISADMIN)
-- **Creación de Residenciales:** La creación de nuevas instalaciones (Residenciales) es responsabilidad exclusiva del rol `SISADMIN`. Esto se realiza desde el frontend en la pestaña de "Instalaciones" dentro de Gestión Residencial.
-- **Configuración Geográfica:** Cada residencial guarda su propia configuración de mapas (Latitud Centro, Longitud Centro y Zoom por Defecto) en la tabla `residenciales`. Estos datos se configuran al crear la instalación y deben ser utilizados por defecto al cargar los mapas operativos de ese inquilino.
-- **Jerarquía:** Antes de registrar Ubicaciones, Casas o Puntos QR, se debe registrar el Residencial base.
+## 10. Jerarquía de Residenciales y Mapas
+- **Pestaña y Gestión de Residenciales:** Ubicada de forma prominente como primera pestaña en `/residencial`. Permite visualizar todas las urbanizaciones/condominios registrados en tarjetas corporativas con indicadores de estado (`ACTIVO`), contactos y parámetros operativos.
+- **Acceso RBAC:** Los roles `ADMIN` y `SISADMIN` tienen autorización para listar (`GET /api/v1/residenciales`), crear nuevas instalaciones (`POST /api/v1/residenciales`) y configurar sus parámetros (`PUT /api/v1/residencial/config`).
+- **Barra de Residencial Activo:** Implementada en la cabecera superior de `/residencial` con selector desplegable sincronizado con `localStorage.getItem('residencial_id')`, métricas rápidas (casas y habitantes asociados) y botón directo `+ Nuevo Residencial`.
+- **Configuración Geográfica y Satelital:** Cada residencial almacena Latitud Centro, Longitud Centro y Zoom por Defecto (10–18). Estos valores alimentan el encuadre inicial en los mapas operativos de `/map` y control de rondas.
+- **Jerarquía:** Antes de registrar Ubicaciones, Casas o Puntos QR, se debe registrar el Residencial base. En el modal de registro de viviendas se muestra explícitamente el residencial asignado.
 
 ## 11. Programación y Gestión de Turnos
 - **Aislamiento por Residencial:** Planificación de turnos de guardias y supervisores realizada de forma aislada por residencial activo (`X-Residencial-ID`), con acceso restringido exclusivamente a los roles `ADMIN` y `SISADMIN`.
@@ -67,5 +69,24 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 - **Roles RBAC del Módulo:** `OPERADOR_OPERACIONES` (apertura de solicitud y ruta), `GESTOR_TRANSPORTE` (asignación de unidad/chofer), `MECANICO_TALLER` (inspección 360 mecánica y horómetro/km), `GUARDIA_GARITA` (EPP de conductor y control de salida/llegada), `AUDITOR_FLOTA` (trazabilidad global), con bypass para `SISADMIN`.
 - **Máquina de Estados Finita (FSM):** Ciclo irreversible de 10 estados (`DRAFT` ➔ `ASIGNADA` ➔ `INSPECCION_TALLER_PENDIENTE` ➔ `APROBADA_TALLER` / `RECHAZADA_TALLER` ➔ `GARITA_SALIDA_PENDIENTE` ➔ `EN_TRANSITO` ➔ `GARITA_LLEGADA_PENDIENTE` ➔ `CHECKIN_CONFORME` / `CHECKIN_CON_OBSERVACION` ➔ `INSPECCION_CIERRE_TALLER` ➔ `CERRADO_FINALIZADO`).
 - **PWA e Interfaz de Usuario:** Formulario optimizado para tablets IP68 en `/flota/inspeccion` con captura fotográfica, dashboard en `/flota`, catálogo en `/flota/vehiculos`, y contenedor enmarcado con borde dorado (`#FACC15`) y badge `MÓDULO 360` en el `Sidebar.tsx`.
+
+## 13. Rastreo Satelital GPS en Vivo e Histórico (Tracking)
+- **Endpoints:**
+  - `POST /api/v1/tracking/location`: Baliza periódica de posicionamiento transmitida cada 15 segundos por el personal operativo.
+  - `DELETE /api/v1/tracking/location`: Remueve la baliza activa al apagar patrullaje o cerrar sesión.
+  - `GET /api/v1/tracking/ubicaciones`: Recupera guardias activos transmitiendo en tiempo real (ventana extendida a 15 minutos).
+  - `GET /api/v1/tracking/historial`: Consulta trazado de rutas históricas por `usuario_id`, `fecha_inicio` y `fecha_fin`.
+- **Normalización y Conversión de Zonas Horarias:** La base de datos almacena marcas temporales en UTC (`registrado_en`). El backend incorpora el parser inteligente `ParseFechaFiltro` en `internal/repository/tracking.go`, capaz de procesar cadenas ISO-8601 UTC (`Z`) o interpretar horas locales (asumiendo Nicaragua `America/Managua` UTC-6) y convertirlas a UTC de forma transparente, previniendo discrepancias y garantizando el trazado de polilíneas exactas en el mapa web.
+- **Aislamiento Multi-Tenant & Modo Global:** Los usuarios con rol `SISADMIN` o con residencial `GLOBAL` pueden consultar ubicaciones e historial de forma consolidada para todas las instalaciones, mientras que los roles `ADMIN` visualizan estrictamente el personal de su residencial.
+
+## 14. Aplicación Móvil para Guardias y Patrulleros (Flutter APK)
+- **Ubicación del Proyecto y Compilado:** Desarrollada en Flutter (Dart 3.2.6) en `/Users/informatica/Documents/smart_residential_mobile`. Artefacto release para distribución: `smart_residential_guarda.apk` (30 MB).
+- **Módulos Operativos Integrados:**
+  - **Patrullaje GPS Continuo en Segundo Plano:** Servicio de baliza que transmite coordenadas cada 15 segundos incluso con la pantalla apagada o aplicación minimizada (`_stopGpsOnBackground = false`), con contador visual de paquetes y confirmación de recepción.
+  - **Escáner QR para Rondas Perimetrales:** Captura mediante cámara en tiempo real (`mobile_scanner`), control de linterna y registro de marcaciones georreferenciadas hacia `POST /api/v1/rondas/marcacion`.
+  - **Control de Garita y Visitas:** Bitácora en vivo con búsqueda por nombre, placa o número de casa, registro de nuevas visitas y transiciones rápidas de estado (`EN_CURSO` y `FINALIZADA`).
+  - **Despacho de Incidentes de Campo:** Formulario con categorización, chips de severidad (`BAJA`, `MEDIA`, `ALTA`, `CRITICA`), coordenadas GPS auto-detectadas y envío a `POST /api/v1/incidentes`.
+  - **Gestión de Turnos y Asistencia:** Visualización de turnos programados y registro de check-in (`POST /api/v1/turnos/{id}/asistencia`).
+  - **Botón de Emergencia SOS:** Disparo de alerta crítica inmediata en garita y central de monitoreo con un toque.
 
 
