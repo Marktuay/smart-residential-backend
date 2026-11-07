@@ -154,11 +154,11 @@ func main() {
 	mux.Handle("GET /api/v1/flota/solicitudes/{id}/inspecciones", middleware.AuthMiddleware(http.HandlerFunc(handler.ObtenerInspeccionesHandler)))
 	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleAuditorFlota, model.RoleSupervisor)(http.HandlerFunc(handler.TransicionEstadoHandler))))
 
-	// Envolver todo el enrutador con el middleware CORS
-	handlerConCORS := middleware.CorsMiddleware(mux)
+	// Envolver todo el enrutador con los middlewares de Cloudflare Security y CORS
+	handlerConSeguridad := middleware.CloudflareSecurityMiddleware(middleware.CorsMiddleware(mux))
 
 	log.Println("Servidor iniciado en el puerto :8080...")
-	if err := http.ListenAndServe(":8080", handlerConCORS); err != nil {
+	if err := http.ListenAndServe(":8080", handlerConSeguridad); err != nil {
 		log.Fatal("Error iniciando el servidor:", err)
 	}
 }

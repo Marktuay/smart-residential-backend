@@ -47,15 +47,3 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-
-// GetClientIP es una función helper para extraer el header CF-Connecting-IP
-func GetClientIP(r *http.Request) string {
-	ip := r.Header.Get("CF-Connecting-IP")
-	if ip == "" {
-		ip = r.Header.Get("X-Forwarded-For")
-	}
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-	return ip
-}
