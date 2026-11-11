@@ -410,16 +410,16 @@ Reglas de respuesta:
 			},
 		},
 		"generationConfig": map[string]interface{}{
-			"temperature":     0.25,
-			"maxOutputTokens": 950,
+			"temperature":     0.3,
+			"maxOutputTokens": 2500,
 		},
 	}
 
 	bodyBytes, _ := json.Marshal(payload)
 
 	// Modelos soportados con fallback automático
-	modelos := []string{"gemini-2.0-flash", "gemini-1.5-flash"}
-	client := &http.Client{Timeout: 12 * time.Second}
+	modelos := []string{"gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3.8-flash", "gemini-flash-latest"}
+	client := &http.Client{Timeout: 15 * time.Second}
 
 	var ultimoError error
 	for _, mod := range modelos {
@@ -455,8 +455,16 @@ Reglas de respuesta:
 			} `json:"candidates"`
 		}
 
-		if err := json.Unmarshal(respBody, &resData); err == nil && len(resData.Candidates) > 0 && len(resData.Candidates[0].Content.Parts) > 0 {
-			return resData.Candidates[0].Content.Parts[0].Text, nil
+		if err := json.Unmarshal(respBody, &resData); err == nil && len(resData.Candidates) > 0 {
+			var sb strings.Builder
+			for _, part := range resData.Candidates[0].Content.Parts {
+				if part.Text != "" {
+					sb.WriteString(part.Text)
+				}
+			}
+			if sb.Len() > 0 {
+				return sb.String(), nil
+			}
 		}
 	}
 
