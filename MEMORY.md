@@ -25,7 +25,7 @@ Se ha completado la migración y despliegue en producción de la solución integ
      * Fuente de respuesta: `GEMINI_AI`, capaz de redactar informes de seguridad ejecutivos, cruzar telemetría en tiempo real, recomendar tácticas operativas e identificar personal y anomalías con cero alucinación.
   2. **Backend & DB:** Tablas `hermes_config` y `hermes_alertas` en Cloud SQL, cuenta de servicio `hermes.agent@ncs365.com` (rol `SISADMIN`), endpoints `/api/v1/hermes/...` y worker en segundo plano en `smart-backend.service`.
   3. **Motor Conversacional Multitemático & IA Híbrida (`internal/hermes/chat.go`):**
-     * Integración con **Gemini 2.0 Flash / 1.5 Flash** para razonamiento avanzado cuando se provee API Key.
+     * Integración con **Gemini 3.5 Flash / 3.5 Flash Lite** para razonamiento avanzado cuando se provee API Key (soporte de concatenación multiparte y tokens ampliados a 2500).
      * **Motor Analítico Autónomo (`HERMES_ANALYTICS`):** Opera 100% offline y sin costo de API, resolviendo 11 intenciones operativas reales (Saludos, Rondas, Flota 360, Garita/Visitas, Búsqueda de personal por nombre, GPS en vivo, Turnos, Incidentes, Alertas, Casas/Contratos y Diagnóstico Global).
      * Telemetría GPS corregida para filtrar estrictamente balizas en vivo de los últimos 15 minutos e integración de catálogo completo de personal.
   4. **Frontend Producción:** Desplegado en `https://app.ncsecurity.net/hermes` bajo PM2 con métricas de salud, filtros por severidad, resolución de alertas, ajuste de parámetros y 7 botones de consulta rápida en el chat.
@@ -33,7 +33,19 @@ Se ha completado la migración y despliegue en producción de la solución integ
      * Enrutamiento dinámico en login: guardias van a `HomeScreen`, directivos/supervisores van a `HermesAdminScreen`.
      * Monitoreo con sondeo de 15s, vibración háptica en emergencias críticas, resolución de alertas desde el teléfono, chat con Hermes y supervisión GPS en vivo.
      * Interoperabilidad fluida con "Modo Guarda" para cubrir puestos o escanear puntos QR.
-     * Artefacto compilado: `smart_residential_guarda.apk` (30 MB).
+
+* **ENTREGA 3 DESPLEGADA (Noviembre 2026 - Tracking Satelital & Mapa Inteligente):**
+  1. **Servicio en Primer Plano en App Móvil (`smart_residential_mobile`):**
+     * Implementación de Foreground Service nativo con notificación persistente oficial en la barra de Android (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `WAKE_LOCK`).
+     * Activación de `enableWakeLock: true` y `setOngoing: true` para impedir que el *Doze Mode* de Android congele el GPS con la pantalla bloqueada o en el bolsillo.
+     * Muestreo continuo por desplazamiento (`distanceFilter: 8m`, `intervalDuration: 10s`) y latido de respaldo (*heartbeat*) cada 20 segundos para guardias en garita fija.
+     * Timeout GPS ampliado a 15 segundos y filtro de precisión (< 80 metros) para evitar saltos laterales anómalos.
+     * Artefacto compilado: `smart_residential_guarda.apk` (30.4 MB).
+  2. **Segmentación Inteligente en Mapa Web (`/map`):**
+     * En `src/components/map/MapContainerComponent.tsx`: Algoritmo de división automática de trayectorias en segmentos limpios si entre dos puntos consecutivos la brecha excede 2.5 minutos o existe un salto espacial > 200m sin puntos intermedios.
+     * Se elimina completamente el trazado de líneas rectas irreales sobre casas, muros o techos.
+     * Muestra las brechas de señal satelital o suspensión del dispositivo con líneas discontinuas de advertencia.
+     * Desplegado y reiniciado en el servidor de producción bajo PM2 (`smart-frontend`).
 
 ---
 
