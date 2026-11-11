@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/handler"
+	"smart-residential-backend/internal/hermes"
 	"smart-residential-backend/internal/middleware"
 	"smart-residential-backend/internal/model"
 	"smart-residential-backend/internal/repository"
@@ -43,7 +46,15 @@ func main() {
 	if err := repository.InicializarTablasFlota(context.Background()); err != nil {
 		log.Printf("Advertencia: No se pudo inicializar las tablas de flota: %v", err)
 	}
+	if err := repository.InitHermesDB(); err != nil {
+		log.Printf("Advertencia: No se pudo inicializar las tablas de Hermes: %v", err)
+	}
 	handler.InitVAPIDKeys()
+
+	// Iniciar Motor Autónomo Hermes Sentinel (supervisión en segundo plano)
+	hermesEngine := hermes.GetEngine()
+	hermesEngine.Start(context.Background(), 60*time.Second)
+	defer hermesEngine.Stop()
 
 	// Iniciar Garbage Collector (cada 24h) para el historial de ubicaciones
 	go func() {
@@ -154,11 +165,25 @@ func main() {
 	mux.Handle("GET /api/v1/flota/solicitudes/{id}/inspecciones", middleware.AuthMiddleware(http.HandlerFunc(handler.ObtenerInspeccionesHandler)))
 	mux.Handle("PUT /api/v1/flota/solicitudes/{id}/estado", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleGestorTransporte, model.RoleAuditorFlota, model.RoleSupervisor)(http.HandlerFunc(handler.TransicionEstadoHandler))))
 
+	// Controlador Autónomo Hermes
+	mux.Handle("GET /api/v1/hermes/status", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerHermesStatusHandler))))
+	mux.Handle("GET /api/v1/hermes/alertas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ListarHermesAlertasHandler))))
+	mux.Handle("PUT /api/v1/hermes/alertas/{id}/resolver", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ResolverHermesAlertaHandler))))
+	mux.Handle("GET /api/v1/hermes/config", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ObtenerHermesConfigHandler))))
+	mux.Handle("PUT /api/v1/hermes/config", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarHermesConfigHandler))))
+	mux.Handle("POST /api/v1/hermes/evaluar", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.EjecutarCicloHermesHandler))))
+	mux.Handle("POST /api/v1/hermes/chat", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.EnviarMensajeChatHermesHandler))))
+
 	// Envolver todo el enrutador con los middlewares de Cloudflare Security y CORS
 	handlerConSeguridad := middleware.CloudflareSecurityMiddleware(middleware.CorsMiddleware(mux))
 
-	log.Println("Servidor iniciado en el puerto :8080...")
-	if err := http.ListenAndServe(":8080", handlerConSeguridad); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Servidor iniciado en el puerto :%s...\n", port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), handlerConSeguridad); err != nil {
 		log.Fatal("Error iniciando el servidor:", err)
 	}
 }

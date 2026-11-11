@@ -89,4 +89,50 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
   - **Gestión de Turnos y Asistencia:** Visualización de turnos programados y registro de check-in (`POST /api/v1/turnos/{id}/asistencia`).
   - **Botón de Emergencia SOS:** Disparo de alerta crítica inmediata en garita y central de monitoreo con un toque.
 
+## 15. Agente Autónomo Controlador y Administrador en Producción (Hermes Sentinel)
+- **Identidad de Servicio y Rol:** Usuario de sistema `hermes.agent@ncs365.com` con rol `SISADMIN` y `residencial_id: GLOBAL`. Trazabilidad total de cada intervención en `logs_auditoria_sistema` (`actor = "HERMES_CONTROLLER"`).
+- **Tablas en PostgreSQL:**
+  - `hermes_config`: Parámetros de monitoreo (`intervalo_evaluacion_seg`, `max_inactividad_gps_mins`, banderas para alertas SOS, rondas y flota por residencial o `GLOBAL`).
+  - `hermes_alertas`: Anomalías registradas (`INACTIVIDAD_GPS`, `BOTON_PANICO_SOS`, `RONDA_VENCIDA`, `INCIDENTE_CRITICO`, `FLOTA_ANOMALIA`), con severidades (`BAJA`, `MEDIA`, `ALTA`, `CRITICA`), deduplicación en ventana de 15 minutos y ciclo de vida (`PENDIENTE`, `NOTIFICADO`, `ATENDIDO`, `DESCARTADO`).
+- **Motor Centinela en Go (`internal/hermes`):**
+  - Corre en goroutines en segundo plano (intervalo por defecto: 60s) coordinado en `cmd/api/main.go`.
+  - **Inactividad GPS:** Detecta guardias con turno activo (`PRESENTE` o en horario vigente) sin emitir balizas GPS por más de `max_inactividad_gps_mins` (defecto 5 min) y genera alerta `ALTA`.
+  - **Incidentes Críticos y SOS:** Detecta alertas de pánico e incidentes de severidad `CRITICA` abiertos y genera escalamiento inmediato.
+  - **Rondas Vencidas:** Identifica rondas perimetrales no completadas al expirar su horario con tolerancia.
+  - **Flota 360:** Supervisa retenciones anormales de vehículos en taller o garita de salida.
+- **Endpoints REST Expuestos:**
+  - `GET /api/v1/hermes/status`: Estado, uptime, versión y métricas de alertas activas.
+  - `GET /api/v1/hermes/alertas`: Listado filtrable de alertas por residencial, severidad y estado.
+  - `PUT /api/v1/hermes/alertas/{id}/resolver`: Resolución o descarte de alertas por supervisores.
+  - `GET /api/v1/hermes/config` & `PUT /api/v1/hermes/config`: Lectura y ajuste de parámetros de supervisión.
+  - `POST /api/v1/hermes/evaluar`: Disparo manual de ciclo de evaluación.
+  - `POST /api/v1/hermes/chat`: Asistente conversacional con IA híbrida y telemetría en tiempo real:
+    - **Soporte Gemini:** Invoca `gemini-2.0-flash` con fallback a `gemini-1.5-flash` cuando se provee API Key (`hermes_config` o `GEMINI_API_KEY`).
+    - **Motor Analítico Autónomo (`HERMES_ANALYTICS`):** Opera 100% offline y sin costo de API, resolviendo 11 intenciones operativas reales:
+      1. *Saludos y Ayuda:* Saludo corporativo de NCS365 y menú de capacidades.
+      2. *Rondas y Recorridos:* Programas activos, porcentaje de cumplimiento, rondas atrasadas y puntos QR marcados.
+      3. *Flota Pesada 360:* Vehículos operando vs taller, solicitudes de movimiento y máquina de estados FSM.
+      4. *Garita y Visitas:* Visitantes del día, vehículos activos en predio (`EN_CURSO`), placas y casas destino.
+      5. *Búsqueda Individual de Personal:* Consulta por nombre, email o ID de cualquier colaborador (ej. "Test", "Mario"), retornando rol, estado en nómina, horario de turno hoy y telemetría satelital GPS.
+      6. *Personal y Balizas GPS (< 15 min):* Telemetría en vivo de guardias activos, velocidad, precisión y coordenadas.
+      7. *Programación y Turnos:* Turnos asignados del día y asistencia confirmada (`PRESENTE`/`PENDIENTE`).
+      8. *Incidentes y Botón SOS:* Novedades de las últimas 24 horas clasificadas por gravedad y estado.
+      9. *Alertas Centinela:* Bandeja de anomalías detectadas automáticamente por Hermes.
+      10. *Comunidad y Casas:* Censo inmobiliario y porcentaje de cobertura con contrato de seguridad activo.
+      11. *Diagnóstico Operativo Global:* Tablero ejecutivo con semáforo de riesgo consolidado.
+
+## 16. Experiencia Móvil de Administrador y Supervisor (Hermes en Flutter)
+- **Enrutamiento por Rol en Login (`lib/main.dart`):**
+  - Roles operativos (`GUARDIA`): Redirigen a la interfaz de campo tradicional de rondas, garita y baliza GPS (`HomeScreen`).
+  - Roles de mando (`ADMIN`, `SISADMIN`, `SUPERVISOR`): Redirigen automáticamente a la consola móvil de mando de **Hermes Sentinel** (`HermesAdminScreen`).
+- **Módulos Integrados en la App Móvil (`lib/screens/hermes_admin_screen.dart`):**
+  - **Pestaña 1 (Bandeja de Alertas en Tiempo Real):** Monitoreo activo con polling de 15 segundos y vibración háptica fuerte ante alertas críticas. Filtros dinámicos por estado (`PENDIENTE`, `ATENDIDO`, `DESCARTADO`) y severidad (`CRITICA`, `ALTA`, etc.), con modal para resolución y registro de notas de campo directamente a la base de datos de producción.
+  - **Pestaña 2 (Chat Operativo con Hermes IA):** Interacción directa con el agente controlador para consultar el estado de las instalaciones, rondas atrasadas, incidentes y disponibilidad del personal con respuestas inmediatas contextualizadas y 7 chips de consulta rápida.
+  - **Pestaña 3 (Supervisión GPS en Vivo):** Listado del personal en servicio activo transmitiendo coordenadas en tiempo real, con velocidad y precisión en metros.
+  - **Interoperabilidad:** Menú superior que permite a supervisores conmutar al "Modo Guarda" en caso de necesitar escanear puntos QR o cubrir un puesto sin cerrar sesión.
+- **Artefacto Compilado:** Release para Android `smart_residential_guarda.apk` (30 MB) generado con `flutter build apk --release` y validado con `flutter analyze` (0 errores, 0 advertencias).
+
+
+
+
 

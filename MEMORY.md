@@ -19,6 +19,19 @@ Se ha completado la migración y despliegue en producción de la solución integ
   1. **Matriz GRID de Programación (`/programacion`):** Reemplazo de vista simple por tabla GRID por colaborador con turnos `TD`, `TN`, `EX` y modal de **Programación Masiva de Turnos** con antiduplicados.
   2. **Bitácora de Incidentes (`/incidentes`):** Formulario con área **Drag & Drop para evidencia fotográfica**, filtro por estado y mapa de ubicación.
   3. **Visitas & Notificaciones (`/visitas`):** Flexibilización de validación de cédula/pasaporte y modal de **Notificación Asistida vía WhatsApp (`wa.me`) y Push Web**.
+* **ENTREGA 2 DESPLEGADA (Noviembre 2026):**
+  1. **Hermes Sentinel IA (`/hermes`):** Agente controlador y administrador autónomo en producción 24/7. Supervisa inactividad GPS en guardias con turno activo, escalamiento de alertas críticas SOS, rondas perimetrales incompletas y control de tiempos en flota pesada 360.
+  2. **Backend & DB:** Tablas `hermes_config` y `hermes_alertas` en Cloud SQL, cuenta de servicio `hermes.agent@ncs365.com` (rol `SISADMIN`), endpoints `/api/v1/hermes/...` y worker en segundo plano en `smart-backend.service`.
+  3. **Motor Conversacional Multitemático & IA Híbrida (`internal/hermes/chat.go`):**
+     * Integración con **Gemini 2.0 Flash / 1.5 Flash** para razonamiento avanzado cuando se provee API Key.
+     * **Motor Analítico Autónomo (`HERMES_ANALYTICS`):** Opera 100% offline y sin costo de API, resolviendo 11 intenciones operativas reales (Saludos, Rondas, Flota 360, Garita/Visitas, Búsqueda de personal por nombre, GPS en vivo, Turnos, Incidentes, Alertas, Casas/Contratos y Diagnóstico Global).
+     * Telemetría GPS corregida para filtrar estrictamente balizas en vivo de los últimos 15 minutos e integración de catálogo completo de personal.
+  4. **Frontend Producción:** Desplegado en `https://app.ncsecurity.net/hermes` bajo PM2 con métricas de salud, filtros por severidad, resolución de alertas, ajuste de parámetros y 7 botones de consulta rápida en el chat.
+  5. **Aplicación Móvil para Administradores y Supervisores (Flutter):**
+     * Enrutamiento dinámico en login: guardias van a `HomeScreen`, directivos/supervisores van a `HermesAdminScreen`.
+     * Monitoreo con sondeo de 15s, vibración háptica en emergencias críticas, resolución de alertas desde el teléfono, chat con Hermes y supervisión GPS en vivo.
+     * Interoperabilidad fluida con "Modo Guarda" para cubrir puestos o escanear puntos QR.
+     * Artefacto compilado: `smart_residential_guarda.apk` (30 MB).
 
 ---
 
