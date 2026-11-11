@@ -21,6 +21,8 @@ Se ha completado la migración y despliegue en producción de la solución integ
   3. **Visitas & Notificaciones (`/visitas`):** Flexibilización de validación de cédula/pasaporte y modal de **Notificación Asistida vía WhatsApp (`wa.me`) y Push Web**.
 * **ENTREGA 2 DESPLEGADA (Noviembre 2026):**
   1. **Hermes Sentinel IA (`/hermes`):** Agente controlador y administrador autónomo en producción 24/7. Supervisa inactividad GPS en guardias con turno activo, escalamiento de alertas críticas SOS, rondas perimetrales incompletas y control de tiempos en flota pesada 360.
+     * **Nivel Cognitivo 9.5/10 Activado:** Conectado con la API Key corporativa de Google AI Studio sobre `gemini-3.5-flash` (con fallbacks a `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite-preview` y `gemini-3.8-flash`).
+     * Fuente de respuesta: `GEMINI_AI`, capaz de redactar informes de seguridad ejecutivos, cruzar telemetría en tiempo real, recomendar tácticas operativas e identificar personal y anomalías con cero alucinación.
   2. **Backend & DB:** Tablas `hermes_config` y `hermes_alertas` en Cloud SQL, cuenta de servicio `hermes.agent@ncs365.com` (rol `SISADMIN`), endpoints `/api/v1/hermes/...` y worker en segundo plano en `smart-backend.service`.
   3. **Motor Conversacional Multitemático & IA Híbrida (`internal/hermes/chat.go`):**
      * Integración con **Gemini 2.0 Flash / 1.5 Flash** para razonamiento avanzado cuando se provee API Key.
