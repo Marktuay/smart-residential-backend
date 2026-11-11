@@ -72,11 +72,13 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
 
 ## 13. Rastreo Satelital GPS en Vivo e Histórico (Tracking)
 - **Endpoints:**
-  - `POST /api/v1/tracking/location`: Baliza periódica de posicionamiento transmitida cada 15 segundos por el personal operativo.
+  - `POST /api/v1/tracking/location`: Baliza periódica de posicionamiento transmitida por el personal operativo.
   - `DELETE /api/v1/tracking/location`: Remueve la baliza activa al apagar patrullaje o cerrar sesión.
   - `GET /api/v1/tracking/ubicaciones`: Recupera guardias activos transmitiendo en tiempo real (ventana extendida a 15 minutos).
   - `GET /api/v1/tracking/historial`: Consulta trazado de rutas históricas por `usuario_id`, `fecha_inicio` y `fecha_fin`.
 - **Normalización y Conversión de Zonas Horarias:** La base de datos almacena marcas temporales en UTC (`registrado_en`). El backend incorpora el parser inteligente `ParseFechaFiltro` en `internal/repository/tracking.go`, capaz de procesar cadenas ISO-8601 UTC (`Z`) o interpretar horas locales (asumiendo Nicaragua `America/Managua` UTC-6) y convertirlas a UTC de forma transparente, previniendo discrepancias y garantizando el trazado de polilíneas exactas en el mapa web.
+- **Segmentación Inteligente en Mapa Web:** En `src/components/map/MapContainerComponent.tsx`, el mapa segmenta automáticamente la trayectoria si la diferencia entre dos puntos excede 2.5 minutos o existe un salto espacial > 200m sin puntos intermedios. Previene el trazado de líneas rectas irreales sobre casas o muros, dibujando segmentos limpios y líneas de advertencia para brechas de señal.
+- **Servicio en Primer Plano en App Móvil:** La app Android (`smart_residential_mobile`) implementa `AndroidSettings` con `ForegroundNotificationConfig` (`enableWakeLock: true`, `distanceFilter: 8m`), impidiendo que el Doze Mode de Android congele las transmisiones GPS en el bolsillo o con la pantalla apagada.
 - **Aislamiento Multi-Tenant & Modo Global:** Los usuarios con rol `SISADMIN` o con residencial `GLOBAL` pueden consultar ubicaciones e historial de forma consolidada para todas las instalaciones, mientras que los roles `ADMIN` visualizan estrictamente el personal de su residencial.
 
 ## 14. Aplicación Móvil para Guardias y Patrulleros (Flutter APK)
