@@ -98,11 +98,21 @@ func ResolverHermesAlertaHandler(w http.ResponseWriter, r *http.Request) {
 // ObtenerHermesConfigHandler consulta la configuración de monitoreo
 func ObtenerHermesConfigHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID := r.Context().Value(middleware.ResidencialIDKey).(string)
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
 
 	cfg, err := repository.ObtenerHermesConfig(r.Context(), residencialID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error obteniendo configuración de Hermes: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// Nunca exponer la API Key en texto plano; enmascarar si está configurada
+	if cfg.GeminiAPIKey != "" {
+		if cfg.ResidencialID == "GLOBAL" && callerRole != model.RoleSisadmin && residencialID != "GLOBAL" {
+			cfg.GeminiAPIKey = ""
+		} else {
+			cfg.GeminiAPIKey = "********"
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -125,6 +135,15 @@ func ActualizarHermesConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MaxInactividadGpsMins < 1 {
 		req.MaxInactividadGpsMins = 3 // Mínimo 3 minutos
+	}
+
+	// Preservar la clave existente si el cliente envía el marcador enmascarado o vacío
+	if req.GeminiAPIKey == "" || req.GeminiAPIKey == "********" {
+		if existing, errCfg := repository.ObtenerHermesConfig(r.Context(), residencialID); errCfg == nil && existing.ResidencialID == residencialID {
+			req.GeminiAPIKey = existing.GeminiAPIKey
+		} else if req.GeminiAPIKey == "********" {
+			req.GeminiAPIKey = ""
+		}
 	}
 
 	if err := repository.GuardarHermesConfig(r.Context(), &req); err != nil {

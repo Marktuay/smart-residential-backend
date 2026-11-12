@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"smart-residential-backend/internal/auth"
 	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/handler"
 	"smart-residential-backend/internal/hermes"
@@ -16,6 +17,9 @@ import (
 )
 
 func main() {
+	if err := auth.InitJWT(); err != nil {
+		log.Fatalf("Error inicializando JWT: %v", err)
+	}
 	if err := db.InicializarDB(); err != nil {
 		log.Fatalf("Error inicializando la base de datos: %v", err)
 	}
@@ -127,7 +131,7 @@ func main() {
 
 	// Residencial
 	mux.Handle("GET /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ListarResidencialesHandler))))
-	mux.Handle("POST /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.CrearResidencialHandler))))
+	mux.Handle("POST /api/v1/residenciales", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleSisadmin)(http.HandlerFunc(handler.CrearResidencialHandler))))
 	mux.Handle("GET /api/v1/residencial/info", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin, model.RoleSupervisor)(http.HandlerFunc(handler.ObtenerResidencialHandler))))
 	mux.Handle("PUT /api/v1/residencial/config", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ActualizarConfiguracionHandler))))
 	mux.Handle("GET /api/v1/casas", middleware.AuthMiddleware(middleware.RBACMiddleware(model.RoleAdmin, model.RoleSisadmin)(http.HandlerFunc(handler.ListarCasasHandler))))

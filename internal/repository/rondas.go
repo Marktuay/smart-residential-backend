@@ -118,8 +118,9 @@ func ObtenerPuntosDePrograma(ctx context.Context, programaID int64) ([]model.Pun
 		SELECT p.id, p.residencial_id, p.casa_id, p.nombre, p.codigo_qr, p.latitud, p.longitud,
 		       COALESCE(c.numero_casa, ''), COALESCE(c.tiene_contrato_seguridad, false)
 		FROM programas_puntos pp
-		JOIN puntos_qr p ON pp.punto_qr_id = p.id
-		LEFT JOIN casas c ON p.casa_id = c.id
+		JOIN programas_rondas pr ON pp.programa_id = pr.id
+		JOIN puntos_qr p ON pp.punto_qr_id = p.id AND p.residencial_id = pr.residencial_id
+		LEFT JOIN casas c ON p.casa_id = c.id AND c.residencial_id = pr.residencial_id
 		WHERE pp.programa_id = $1
 		ORDER BY pp.orden ASC
 	`
@@ -175,6 +176,10 @@ func CrearProgramaRonda(ctx context.Context, p *model.ProgramaRonda) error {
 		defer stmt.Close()
 
 		for i, puntoID := range p.Puntos {
+			var owns int
+			if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM puntos_qr WHERE id = $1 AND residencial_id = $2`, puntoID, p.ResidencialID).Scan(&owns); err != nil || owns == 0 {
+				return fmt.Errorf("el punto QR %d no pertenece al residencial", puntoID)
+			}
 			if _, err := stmt.ExecContext(ctx, p.ID, puntoID, i+1); err != nil {
 				return err
 			}
@@ -211,7 +216,7 @@ func ObtenerAsignacionesRondas(ctx context.Context, residencialID string) ([]mod
 		       COALESCE((SELECT COUNT(*) FROM programas_puntos pp WHERE pp.programa_id = ar.programa_id), 0) AS puntos_total,
 		       TO_CHAR(ar.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
 		FROM asignaciones_rondas ar
-		JOIN programas_rondas pr ON ar.programa_id = pr.id
+		JOIN programas_rondas pr ON ar.programa_id = pr.id AND pr.residencial_id = ar.residencial_id
 		LEFT JOIN usuarios u ON ar.usuario_id = u.id
 		WHERE ar.residencial_id = $1
 		ORDER BY ar.fecha DESC, ar.id DESC
@@ -251,6 +256,16 @@ func ObtenerAsignacionesRondas(ctx context.Context, residencialID string) ([]mod
 
 // CrearAsignacionRonda asigna un programa a un usuario en una fecha
 func CrearAsignacionRonda(ctx context.Context, a *model.AsignacionRonda) error {
+	var progOwns int
+	if err := db.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM programas_rondas WHERE id = $1 AND residencial_id = $2`, a.ProgramaID, a.ResidencialID).Scan(&progOwns); err != nil || progOwns == 0 {
+		return fmt.Errorf("el programa de ronda no pertenece a este residencial")
+	}
+	if a.UsuarioID > 0 {
+		var userOwns int
+		if err := db.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM usuarios WHERE id = $1 AND (residencial_id = $2 OR residencial_id = 'GLOBAL') AND deleted_at IS NULL`, a.UsuarioID, a.ResidencialID).Scan(&userOwns); err != nil || userOwns == 0 {
+			return fmt.Errorf("el guardia asignado no pertenece a este residencial")
+		}
+	}
 	query := `INSERT INTO asignaciones_rondas (residencial_id, programa_id, usuario_id, fecha, estado, puntos_completados) 
 	          VALUES ($1, $2, $3, $4, $5, 0) RETURNING id`
 	if a.Estado == "" {

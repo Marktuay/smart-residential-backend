@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq" // Driver nativo para PostgreSQL
@@ -11,20 +13,32 @@ import (
 
 var DB *sql.DB
 
+func getEnvOrDefault(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
+}
+
 // InicializarDB configura la conexión con PostgreSQL mediante el proxy local
 func InicializarDB() error {
-	// Parámetros por defecto para conectarnos al proxy local de Cloud SQL
-	// que está corriendo en el puerto 5432
-	user := "postgres"
-	password := "Mark8721!@#$"
-	dbname := "postgres"
-	host := "127.0.0.1"
-	port := 5432
+	user := getEnvOrDefault("DB_USER", "postgres")
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		return fmt.Errorf("la variable de entorno DB_PASSWORD es obligatoria")
+	}
+	dbname := getEnvOrDefault("DB_NAME", "postgres")
+	host := getEnvOrDefault("DB_HOST", "127.0.0.1")
+	portStr := getEnvOrDefault("DB_PORT", "5432")
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		port = 5432
+	}
+	sslmode := getEnvOrDefault("DB_SSLMODE", "disable")
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, dbname, sslmode)
 
-	var err error
 	DB, err = sql.Open("postgres", dsn)
 	if err != nil {
 		return fmt.Errorf("error al abrir conexión con la base de datos: %v", err)

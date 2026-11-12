@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"smart-residential-backend/internal/middleware"
+	"smart-residential-backend/internal/model"
 	"smart-residential-backend/internal/repository"
 )
 
@@ -18,6 +19,7 @@ type RegistrarUbicacionRequest struct {
 // RegistrarUbicacionHandler recibe la ubicación bajo demanda del guardia
 func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
 
 	var req RegistrarUbicacionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -25,20 +27,18 @@ func RegistrarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usuarioID := req.UsuarioID
-	if usuarioID == 0 {
-		if ctxUID, ok := r.Context().Value(middleware.UsuarioIDKey).(int64); ok {
-			usuarioID = ctxUID
-		}
-	}
-
-	if usuarioID == 0 {
+	ctxUID, ok := r.Context().Value(middleware.UsuarioIDKey).(int64)
+	if !ok || ctxUID == 0 {
 		http.Error(w, "Usuario no identificado", http.StatusUnauthorized)
 		return
 	}
+	usuarioID := ctxUID
+	if callerRole == model.RoleSisadmin && req.UsuarioID > 0 {
+		usuarioID = req.UsuarioID
+	}
 
-	// Si residencialID es GLOBAL o vacío, obtener el residencial del usuario
-	if residencialID == "" || residencialID == "GLOBAL" {
+	// Solo SISADMIN puede ajustar residencialID mediante header si su token es GLOBAL
+	if callerRole == model.RoleSisadmin && (residencialID == "" || residencialID == "GLOBAL") {
 		if headerRes := r.Header.Get("X-Residencial-ID"); headerRes != "" && headerRes != "GLOBAL" {
 			residencialID = headerRes
 		}
@@ -73,10 +73,13 @@ func EliminarUbicacionHandler(w http.ResponseWriter, r *http.Request) {
 // ObtenerUbicacionesHandler devuelve las últimas ubicaciones registradas
 func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
 
-	// Permitir consultar por query param si es SISADMIN o si se solicita filtro específico
-	if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
-		residencialID = qResID
+	// Solo SISADMIN puede consultar otro residencial o GLOBAL por query param
+	if callerRole == model.RoleSisadmin {
+		if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
+			residencialID = qResID
+		}
 	}
 
 	ubicaciones, err := repository.ObtenerUbicacionesActivas(r.Context(), residencialID)
@@ -96,9 +99,12 @@ func ObtenerUbicacionesHandler(w http.ResponseWriter, r *http.Request) {
 // ObtenerHistorialTrackingHandler devuelve el historial de ubicaciones de un guardia en un rango de fechas
 func ObtenerHistorialTrackingHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
-	
-	if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
-		residencialID = qResID
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+
+	if callerRole == model.RoleSisadmin {
+		if qResID := r.URL.Query().Get("residencial_id"); qResID != "" {
+			residencialID = qResID
+		}
 	}
 	
 	// Extraer parámetros de la URL

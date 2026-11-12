@@ -32,7 +32,7 @@ func ObtenerUsuarioPorEmail(ctx context.Context, email string) (*model.Usuario, 
 	cleanEmail := strings.TrimSpace(email)
 	query := `SELECT id, residencial_id, email, COALESCE(nombre_completo, ''), COALESCE(telefono, ''), COALESCE(cedula, ''), password_hash, rol, COALESCE(activo, true), creado_en 
 			  FROM usuarios 
-			  WHERE LOWER(TRIM(email)) = LOWER($1) AND deleted_at IS NULL`
+			  WHERE LOWER(TRIM(email)) = LOWER($1) AND deleted_at IS NULL AND COALESCE(activo, true) = true`
 
 	var u model.Usuario
 	err := db.DB.QueryRowContext(ctx, query, cleanEmail).Scan(
@@ -210,6 +210,7 @@ func CrearUsuariosBatch(residencialID string, usuarios []model.Usuario) (int, er
 			rol = EXCLUDED.rol,
 			activo = EXCLUDED.activo,
 			deleted_at = NULL
+		WHERE usuarios.residencial_id = EXCLUDED.residencial_id
 	`)
 	if err != nil {
 		return 0, err

@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -63,21 +65,28 @@ func InitHermesDB() error {
 		ON CONFLICT (residencial_id) DO NOTHING;
 	`)
 
-	// Garantizar cuenta de servicio de Hermes como SISADMIN para auditoría y operaciones
+	// Garantizar cuenta de servicio de Hermes como SISADMIN para auditoría y operaciones (no interactiva)
 	emailHermes := "hermes.agent@ncs365.com"
 	var existeID int64
 	err := db.DB.QueryRow("SELECT id FROM usuarios WHERE email = $1", emailHermes).Scan(&existeID)
 	if err == sql.ErrNoRows {
-		passHash, _ := bcrypt.GenerateFromPassword([]byte("HermesSentinel2026!#$"), bcrypt.DefaultCost)
+		randomBytes := make([]byte, 32)
+		if _, errRand := rand.Read(randomBytes); errRand != nil {
+			return fmt.Errorf("error generando secreto de servicio de Hermes: %w", errRand)
+		}
+		passHash, errHash := bcrypt.GenerateFromPassword([]byte(hex.EncodeToString(randomBytes)), bcrypt.DefaultCost)
+		if errHash != nil {
+			return fmt.Errorf("error generando hash de servicio de Hermes: %w", errHash)
+		}
 		_, errIns := db.DB.Exec(`
 			INSERT INTO usuarios (residencial_id, email, nombre_completo, telefono, cedula, password_hash, rol, activo, creado_en)
-			VALUES ('GLOBAL', $1, 'Hermes Autonomous Sentinel', '+505 0000-0000', 'HERMES-AI-001', $2, 'SISADMIN', true, NOW())
+			VALUES ('GLOBAL', $1, 'Hermes Autonomous Sentinel', '+505 0000-0000', 'HERMES-AI-001', $2, 'SISADMIN', false, NOW())
 			ON CONFLICT (email) DO NOTHING;
 		`, emailHermes, string(passHash))
 		if errIns != nil {
 			log.Printf("Advertencia al crear cuenta de servicio de Hermes: %v", errIns)
 		} else {
-			log.Println("✅ Cuenta de servicio de Hermes Sentinel inicializada con rol SISADMIN.")
+			log.Println("✅ Cuenta de servicio de Hermes Sentinel inicializada (no interactiva).")
 		}
 	}
 

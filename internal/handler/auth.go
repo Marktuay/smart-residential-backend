@@ -36,6 +36,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !usuario.Activo {
+		http.Error(w, "Cuenta desactivada", http.StatusForbidden)
+		return
+	}
+
 	// Generar JWT
 	tokenString, err := auth.GenerarToken(usuario.ID, usuario.ResidencialID, usuario.Rol)
 	if err != nil {

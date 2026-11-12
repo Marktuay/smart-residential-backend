@@ -107,6 +107,12 @@ func CrearUsuarioHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+	if req.Rol == model.RoleSisadmin && callerRole != model.RoleSisadmin {
+		http.Error(w, "Solo SISADMIN puede asignar el rol SISADMIN", http.StatusForbidden)
+		return
+	}
+
 	req.Email = strings.TrimSpace(req.Email)
 	if req.Email == "" || req.Password == "" || req.Rol == "" {
 		http.Error(w, "Usuario/Email, contraseña y rol son requeridos", http.StatusBadRequest)
@@ -184,6 +190,12 @@ func ActualizarUsuarioHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Solicitud inválida: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+	if req.Rol == model.RoleSisadmin && callerRole != model.RoleSisadmin {
+		http.Error(w, "Solo SISADMIN puede asignar el rol SISADMIN", http.StatusForbidden)
 		return
 	}
 
@@ -382,6 +394,11 @@ func CargaMasivaUsuariosHandler(w http.ResponseWriter, r *http.Request) {
 			if rolStr == "" {
 				rolStr = "GUARDIA"
 			}
+			callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+			if model.Role(rolStr) == model.RoleSisadmin && callerRole != model.RoleSisadmin {
+				http.Error(w, "Solo SISADMIN puede asignar el rol SISADMIN en carga masiva", http.StatusForbidden)
+				return
+			}
 			pwd := getVal("password")
 
 			pwdHash := string(defaultPasswordHash)
@@ -428,6 +445,11 @@ func CargaMasivaUsuariosHandler(w http.ResponseWriter, r *http.Request) {
 			rolStr := strings.ToUpper(strings.TrimSpace(item.Rol))
 			if rolStr == "" {
 				rolStr = "GUARDIA"
+			}
+			callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+			if model.Role(rolStr) == model.RoleSisadmin && callerRole != model.RoleSisadmin {
+				http.Error(w, "Solo SISADMIN puede asignar el rol SISADMIN en carga masiva", http.StatusForbidden)
+				return
 			}
 
 			pwdHash := string(defaultPasswordHash)

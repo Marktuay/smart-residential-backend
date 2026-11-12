@@ -4,21 +4,32 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
-	dsn := "host=127.0.0.1 port=5432 user=postgres password=Mark8721!@#$ dbname=postgres sslmode=disable"
+	dbPass := os.Getenv("DB_PASSWORD")
+	if dbPass == "" {
+		log.Fatal("DB_PASSWORD es obligatorio")
+	}
+	dsn := fmt.Sprintf("host=127.0.0.1 port=5432 user=postgres password=%s dbname=postgres sslmode=disable", dbPass)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	email := "informatica@newcenturyni.com"
-	password := "Mark8721!@"
+	email := os.Getenv("ADMIN_SEED_EMAIL")
+	if email == "" {
+		email = "informatica@newcenturyni.com"
+	}
+	password := os.Getenv("ADMIN_SEED_PASSWORD")
+	if password == "" {
+		log.Fatal("ADMIN_SEED_PASSWORD es obligatorio")
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatal(err)
@@ -30,5 +41,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Usuario admin creado:", email, "/", password)
+	fmt.Println("Usuario admin creado:", email)
 }

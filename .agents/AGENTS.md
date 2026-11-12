@@ -134,6 +134,22 @@ Este archivo debe ser utilizado por el agente como contexto principal antes de s
   - **Interoperabilidad:** Menú superior que permite a supervisores conmutar al "Modo Guarda" en caso de necesitar escanear puntos QR o cubrir un puesto sin cerrar sesión.
 - **Artefacto Compilado:** Release para Android `smart_residential_guarda.apk` (30 MB) generado con `flutter build apk --release` y validado con `flutter analyze` (0 errores, 0 advertencias).
 
+## 17. Endurecimiento de Seguridad y Producción (Security Hardening)
+- **Gestión de Secretos (Fail-Closed):**
+  - `JWT_SECRET` (mínimo 32 caracteres) y `DB_PASSWORD` son obligatorios por variables de entorno al iniciar (`auth.InitJWT()` y `db.InicializarDB()`); el backend aborta el arranque si faltan.
+  - En producción (`34.31.99.52`), los secretos residen en `/etc/smart-backend.env` (`chmod 600`, `root:root`), cargados por `/etc/systemd/system/smart-backend.service` vía `EnvironmentFile`.
+  - `ValidarToken` verifica explícitamente el algoritmo `*jwt.SigningMethodHMAC`.
+  - La cuenta de servicio `hermes.agent@ncs365.com` usa contraseña aleatoria de 32 bytes (`crypto/rand`) y `activo = false` (no interactiva).
+- **Revocación y Autenticación:** `LoginHandler` y `ObtenerUsuarioPorEmail` rechazan usuarios inactivos (`403 Forbidden`), y `AuthMiddleware` valida en BD que el usuario siga activo y sin `deleted_at`.
+- **Aislamiento Multi-Tenant y RBAC:**
+  - `SISADMIN` requerido para `POST /api/v1/residenciales`, asignar rol `SISADMIN` en usuarios/carga masiva, y usar overrides por `?residencial_id=` / `req.ID` / `usuario_id` en `residencial` y `tracking`.
+  - `CrearUsuariosBatch` restringe el upsert por conflicto de email al mismo `residencial_id`.
+  - `puntos_qr` y `rondas` validan pertenencia de `casa_id`, `puntos`, `programa_id` y `usuario_id` al `residencial_id` activo.
+- **Protección de IA y Frontend:**
+  - `ObtenerHermesConfigHandler` enmascara `GeminiAPIKey` como `"********"` (y la oculta si es `GLOBAL` para no-`SISADMIN`); `ActualizarHermesConfigHandler` preserva la clave existente si recibe `"********"` o vacío.
+  - `internal/hermes/chat.go` aísla la telemetría (`ctxJSON`) y `rutaActual` fuera de `systemInstruction` dentro del bloque `<operational_telemetry>` marcado como datos de solo lectura.
+  - `MapContainerComponent.tsx` sanitiza con `escapeHtml()` las interpolaciones dentro de `L.divIcon`.
+
 
 
 

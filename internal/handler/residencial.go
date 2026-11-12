@@ -13,9 +13,12 @@ import (
 
 func ObtenerResidencialHandler(w http.ResponseWriter, r *http.Request) {
 	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
 
-	if qID := r.URL.Query().Get("residencial_id"); qID != "" {
-		residencialID = qID
+	if callerRole == model.RoleSisadmin {
+		if qID := r.URL.Query().Get("residencial_id"); qID != "" {
+			residencialID = qID
+		}
 	}
 
 	if residencialID == "" || residencialID == "GLOBAL" {
@@ -43,7 +46,21 @@ func ObtenerResidencialHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ListarResidencialesHandler(w http.ResponseWriter, r *http.Request) {
-	// Solo debería acceder a esto un SISADMIN, o en este endpoint se retornan todos.
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+	residencialID, _ := r.Context().Value(middleware.ResidencialIDKey).(string)
+
+	if callerRole != model.RoleSisadmin {
+		res, err := repository.ObtenerResidencial(residencialID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte("[]"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]model.Residencial{*res})
+		return
+	}
+
 	residenciales, err := repository.ListarResidenciales(r.Context())
 	if err != nil {
 		http.Error(w, "Error al listar residenciales", http.StatusInternalServerError)
@@ -416,10 +433,13 @@ func ActualizarConfiguracionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if qID := r.URL.Query().Get("residencial_id"); qID != "" {
-		residencialID = qID
-	} else if req.ID != "" && req.ID != "GLOBAL" {
-		residencialID = req.ID
+	callerRole, _ := r.Context().Value(middleware.UserRoleKey).(model.Role)
+	if callerRole == model.RoleSisadmin {
+		if qID := r.URL.Query().Get("residencial_id"); qID != "" {
+			residencialID = qID
+		} else if req.ID != "" && req.ID != "GLOBAL" {
+			residencialID = req.ID
+		}
 	}
 
 	if residencialID == "" || residencialID == "GLOBAL" {

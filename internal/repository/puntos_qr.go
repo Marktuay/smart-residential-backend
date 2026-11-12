@@ -64,8 +64,8 @@ func ListarPuntosQR(residencialID string) ([]model.PuntoQR, error) {
 		       COALESCE((SELECT COUNT(*) FROM marcaciones_rondas m WHERE m.punto_qr_id = p.id), 0) AS total_marcaciones,
 		       TO_CHAR(p.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
 		FROM puntos_qr p
-		LEFT JOIN casas c ON p.casa_id = c.id AND c.deleted_at IS NULL
-		LEFT JOIN residentes r ON c.id = r.casa_id AND r.deleted_at IS NULL
+		LEFT JOIN casas c ON p.casa_id = c.id AND c.residencial_id = $1 AND c.deleted_at IS NULL
+		LEFT JOIN residentes r ON c.id = r.casa_id AND r.residencial_id = $1 AND r.deleted_at IS NULL
 		WHERE p.residencial_id = $1
 		ORDER BY p.id ASC
 	`
@@ -123,6 +123,13 @@ func CrearPuntoQR(p *model.PuntoQR) error {
 		return fmt.Errorf("DUPLICATE_PUNTO_QR: Ya existe un punto de control con el nombre '%s' en este residencial", p.Nombre)
 	}
 
+	if p.CasaID != nil && *p.CasaID > 0 {
+		var casaCount int
+		if err := db.DB.QueryRow(`SELECT COUNT(*) FROM casas WHERE id = $1 AND residencial_id = $2 AND deleted_at IS NULL`, *p.CasaID, p.ResidencialID).Scan(&casaCount); err != nil || casaCount == 0 {
+			return fmt.Errorf("la casa seleccionada no pertenece a este residencial")
+		}
+	}
+
 	if p.CodigoQR == "" {
 		p.CodigoQR = GenerarCodigoQRSeguro()
 	}
@@ -158,6 +165,13 @@ func ActualizarPuntoQR(p *model.PuntoQR) error {
 	_ = db.DB.QueryRow(`SELECT COUNT(*) FROM puntos_qr WHERE residencial_id = $1 AND LOWER(TRIM(nombre)) = LOWER($2) AND id <> $3`, p.ResidencialID, p.Nombre, p.ID).Scan(&count)
 	if count > 0 {
 		return fmt.Errorf("DUPLICATE_PUNTO_QR: Ya existe otro punto de control con el nombre '%s'", p.Nombre)
+	}
+
+	if p.CasaID != nil && *p.CasaID > 0 {
+		var casaCount int
+		if err := db.DB.QueryRow(`SELECT COUNT(*) FROM casas WHERE id = $1 AND residencial_id = $2 AND deleted_at IS NULL`, *p.CasaID, p.ResidencialID).Scan(&casaCount); err != nil || casaCount == 0 {
+			return fmt.Errorf("la casa seleccionada no pertenece a este residencial")
+		}
 	}
 
 	query := `

@@ -125,8 +125,9 @@ Para corregir el error del Centro de Mando (`pq: column "nivel_gravedad" does no
 
 ---
 
-## 🔒 6. Recomendaciones de Seguridad Continuas (Hardening)
+## 🔒 6. Endurecimiento de Seguridad Aplicado (Hardening)
 
-1. **Variables de Entorno Sensibles:** Mantener el `JWT_SECRET` e información de conexión a DB fuera del código público de git.
-2. **Encabezados Nginx:** Mantener activos los encabezados `X-Frame-Options`, `X-Content-Type-Options` y `Referrer-Policy`.
-3. **CORS Restringido:** Limitar en el backend los orígenes permitidos explícitamente a `https://app.ncsecurity.net`.
+1. **Variables de Entorno Sensibles (Fail-Closed):** `JWT_SECRET` (mínimo 32 caracteres) y `DB_PASSWORD` eliminados del código fuente y exigidos al arrancar. En la VM de backend (`34.31.99.52`) se cargan desde `/etc/smart-backend.env` (`chmod 600`, `root:root`) mediante `EnvironmentFile` en `/etc/systemd/system/smart-backend.service`.
+2. **Autenticación y RBAC:** `ValidarToken` valida `*jwt.SigningMethodHMAC`; `AuthMiddleware` y `LoginHandler` bloquean usuarios inactivos/eliminados; `POST /api/v1/residenciales`, asignación de rol `SISADMIN` y overrides globales de `residencial`/`tracking` restringidos a `SISADMIN`.
+3. **Aislamiento Multi-Tenant y Hermes IA:** Validación de pertenencia de `casa_id`, `puntos_qr`, programas y guardias al `residencial_id`; cuenta de servicio de Hermes no interactiva (`activo = false`, secreto aleatorio); enmascaramiento de `GeminiAPIKey`; aislamiento de telemetría en `<operational_telemetry>` contra prompt injection; y sanitización `escapeHtml()` en marcadores Leaflet (`MapContainerComponent.tsx`).
+4. **Encabezados Nginx & CORS:** Mantener activos los encabezados `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y limitar en producción CORS a `https://app.ncsecurity.net`.

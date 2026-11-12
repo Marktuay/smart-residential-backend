@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"smart-residential-backend/internal/auth"
+	"smart-residential-backend/internal/db"
 	"smart-residential-backend/internal/model"
 	"strings"
 )
@@ -30,6 +31,16 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if err != nil {
 			http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
 			return
+		}
+
+		// Verificación de estado activo/no eliminado contra BD para revocación inmediata
+		if db.DB != nil && claims.UsuarioID > 0 {
+			var activo, eliminado bool
+			errDB := db.DB.QueryRowContext(r.Context(), "SELECT COALESCE(activo, true), deleted_at IS NOT NULL FROM usuarios WHERE id = $1", claims.UsuarioID).Scan(&activo, &eliminado)
+			if errDB != nil || !activo || eliminado {
+				http.Error(w, "Sesión revocada o usuario inactivo", http.StatusUnauthorized)
+				return
+			}
 		}
 
 		// Inyectar datos en el contexto
