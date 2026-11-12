@@ -380,19 +380,49 @@ func consultarGemini(ctx context.Context, apiKey, pregunta string, contexto map[
 	ctxJSON, _ := json.MarshalIndent(contexto, "", "  ")
 
 	systemInstruction := fmt.Sprintf(`
-Eres Hermes Sentinel, el agente controlador y administrador autónomo de seguridad de New Century Security (NCS365).
-Tu misión es asistir de manera ejecutiva, clara, precisa, proactiva y concisa a los directores, administradores y supervisores de seguridad.
+Eres Hermes Sentinel, el agente controlador, administrador autónomo de seguridad y guía oficial del sistema New Century Security (NCS365).
+Tu misión doble es:
+A) Asistir ejecutivamente con telemetría real a directores, administradores y supervisores de seguridad.
+B) Servir como Guía Interactiva y Manual de Uso paso a paso para cualquier usuario que pregunte cómo usar la plataforma Web o la App Móvil.
+
 Estás a cargo de la instalación: %s.
 
 Aquí tienes la radiografía y telemetría en tiempo real completa del sistema (guardias GPS, rondas, turnos, garita/visitas, flota pesada 360, casas, incidentes y alertas):
 %s
 
+=== MANUAL OPERATIVO Y GUÍA DE USO DEL SISTEMA NCS365 ===
+1. PLATAFORMA WEB (https://app.ncsecurity.net):
+   - Selector Multi-Tenant (Barra Superior): Antes de crear casas, rondas, turnos o puntos QR, el usuario debe verificar qué Residencial tiene seleccionado en el selector superior.
+   - Centro de Mando (ruta: /): Resumen General con métricas en vivo del residencial.
+   - Mapa Operativo (ruta: /map): Tiene 2 pestañas: "En Vivo" (guardias transmitiendo GPS en tiempo real) e "Historial" (traza la ruta histórica de un guardia por fecha/hora con segmentación inteligente que evita líneas rectas falsas sobre casas).
+   - Hermes Sentinel (ruta: /hermes): Bandeja de alertas autónomas, métricas de salud, botón de engranaje (⚙️) para configurar umbrales (ej. max_inactividad_gps_mins) y este Chat IA.
+   - Control de Rondas (ruta: /rondas) y Puntos de Control QR (ruta: /puntos-qr): Para configurar rondas, primero se crean los Puntos QR (se pueden asociar opcionalmente a una Casa para mostrar escudo verde si tiene contrato de seguridad activo o rojo si no), luego en /rondas se crea el programa y se asigna a un guardia y horario.
+   - Control de Accesos / Garita (ruta: /visitas): Registro de entrada y salida de visitantes/vehículos. Incluye botón para enviar notificación asistida por WhatsApp (wa.me) y Push Web al residente.
+   - Gestión de Incidencias (ruta: /incidentes): Bitácora de novedades con severidad (BAJA, MEDIA, ALTA, CRITICA), mapa y carga Drag & Drop de evidencia fotográfica.
+   - Gestión Residencial (ruta: /residencial): Alta de nuevos residenciales/condominios, configuración geográfica (Latitud Centro, Longitud Centro y Zoom por defecto para el mapa), y gestión de Casas/Viviendas con el flag "tiene_contrato_seguridad".
+   - Programación de Turnos (ruta: /programacion): Matriz GRID mensual por colaborador con turnos TD (Turno Día), TN (Turno Noche), EX (Extra) y modal de "Programación Masiva de Turnos" (con protección antiduplicados). Acceso restringido a ADMIN y SISADMIN.
+   - Control de Flota 360 (Módulo 360):
+     * /flota (Solicitudes y FSM): Flujo irreversible de 10 estados (DRAFT -> ASIGNADA -> INSPECCION_TALLER_PENDIENTE -> APROBADA_TALLER -> GARITA_SALIDA_PENDIENTE -> EN_TRANSITO -> GARITA_LLEGADA_PENDIENTE -> CHECKIN -> INSPECCION_CIERRE_TALLER -> CERRADO_FINALIZADO).
+     * /flota/inspeccion (Checklist 360 PWA): Formulario táctil para tablets IP68 con captura fotográfica y lectura de horómetro/km.
+     * /flota/vehiculos: Catálogo de vehículos y maquinaria amarilla.
+   - Personal y Usuarios (ruta: /usuarios): Crear/editar usuarios y asignar roles (SISADMIN, ADMIN, SUPERVISOR, GUARDIA, GUARDIA_PATRULLERO, GUARDIA_MOTORIZADO, OPERADOR_C2, RESIDENTE, OPERADOR_OPERACIONES, GESTOR_TRANSPORTE, MECANICO_TALLER, GUARDIA_GARITA).
+   - Despachar Alertas (ruta: /notificar): Envío de comunicados/alertas (ADMIN y SISADMIN).
+   - Gestión de Cobros (ruta: /cobros): Módulo financiero conectado a API externa de cobros.
+   - Auditoría (ruta: /auditoria): Registro inmutable de acciones sensibles (solo SISADMIN).
+
+2. APP MÓVIL ANDROID (NCS365 Guarda):
+   - Si inicia sesión un GUARDIA: Abre la pantalla operativa con:
+     * Switch "Patrullaje / GPS en Vivo": Activa el Servicio en Primer Plano con notificación persistente (transmite cada 8 metros o cada 20s aunque la pantalla esté apagada). Recomendación en el teléfono: Ubicación en "Permitir todo el tiempo" y Batería en "Sin restricciones".
+     * Escáner QR: Para marcar puntos de ronda con cámara y linterna.
+     * Garita / Visitas, Reportar Incidente (con GPS automático), Mis Turnos (para marcar asistencia PRESENTE) y Botón Rojo SOS.
+   - Si inicia sesión un ADMIN, SISADMIN o SUPERVISOR: Abre automáticamente la consola móvil de Hermes (Alertas en vivo con vibración háptica, Chat IA, Supervisión GPS en vivo, y opción "Modo Guarda" en el menú superior para cubrir un puesto o escanear QR sin cerrar sesión).
+
 Reglas de respuesta:
-1. Responde siempre en español, de forma profesional, directa y con tono de comando militar/corporativo de seguridad.
-2. Usa viñetas claras, métricas concretas e íconos temáticos (🛡️, 🚨, 🚶, 🚛, 🚪, 📍, ⏱️, ✅).
-3. Basa tus datos estrictamente en los hechos del contexto en tiempo real anterior. Responde con precisión a cualquier pregunta sobre guardias, rondas, flota, visitas, horarios o residentes.
-4. Si hay incidentes críticos, botones de pánico SOS o guardias sin señal GPS en turno, ponlo como alerta prioritaria al inicio.
-5. Puedes brindar recomendaciones tácticas de supervisión cuando detectes anomalías o patrones irregulares.
+1. Responde siempre en español, de forma clara, profesional y directa.
+2. Usa viñetas claras, negritas en nombres de menús/rutas e íconos temáticos (🛡️, 🚨, 🚶, 🚛, 🚪, 📍, ⏱️, ✅, 📖).
+3. Si el usuario pregunta por datos operativos en vivo (guardias, rondas, flota, visitas, incidentes), basa tus números estrictamente en los hechos del contexto en tiempo real anterior; nunca inventes datos.
+4. Si el usuario pregunta cómo hacer algo en el sistema, dónde está una opción o pide ayuda de uso, guíalo paso a paso usando el Manual Operativo anterior con las rutas exactas y requisitos previos.
+5. Si hay incidentes críticos, botones de pánico SOS o guardias sin señal GPS en turno, ponlo como alerta prioritaria al inicio cuando corresponda.
 `, residencialID, string(ctxJSON))
 
 	payload := map[string]interface{}{
@@ -500,6 +530,13 @@ func generarRespuestaAnalitica(pregunta string, ctx map[string]interface{}, resi
 	totalCasas := getInt("total_casas")
 	casasContrato := getInt("casas_con_contrato")
 	totalQR := getInt("total_puntos_qr")
+
+	// ==========================================
+	// 0. INTENCIÓN: GUÍA DE USO DEL SISTEMA (MODO OFFLINE)
+	// ==========================================
+	if guiaResp, ok := generarGuiaUsoSistema(p); ok {
+		return guiaResp
+	}
 
 	// ==========================================
 	// 1. INTENCIÓN: SALUDOS / PRESENTACIÓN / AYUDA
@@ -842,4 +879,80 @@ func generarRespuestaAnalitica(pregunta string, ctx map[string]interface{}, resi
 
 	sb.WriteString("\n*Puedes preguntarme por:* `guardias activos`, `estado de rondas`, `reporte de flota`, `visitas en garita`, `incidentes`, o `dónde está un guardia`.")
 	return sb.String()
+}
+
+// generarGuiaUsoSistema proporciona instrucciones paso a paso del sistema NCS365 en modo offline
+func generarGuiaUsoSistema(p string) (string, bool) {
+	esPreguntaGuia := strings.Contains(p, "como ") || strings.Contains(p, "cómo ") ||
+		strings.Contains(p, "donde ") || strings.Contains(p, "dónde ") ||
+		strings.Contains(p, "guia") || strings.Contains(p, "guía") ||
+		strings.Contains(p, "manual") || strings.Contains(p, "tutorial") ||
+		strings.Contains(p, "usar el sistema") || strings.Contains(p, "para que sirve") ||
+		strings.Contains(p, "para qué sirve") || strings.Contains(p, "pasos para")
+
+	if !esPreguntaGuia {
+		return "", false
+	}
+
+	// Evitar interceptar preguntas de telemetría como "¿cómo está el residencial?" o "¿dónde está el guarda?"
+	if strings.Contains(p, "como esta") || strings.Contains(p, "cómo está") ||
+		strings.Contains(p, "donde esta") || strings.Contains(p, "dónde está") {
+		return "", false
+	}
+
+	if strings.Contains(p, "turno") || strings.Contains(p, "programacion") || strings.Contains(p, "programación") || strings.Contains(p, "horario") {
+		return "📖 **Guía: Programación de Turnos (`/programacion`)**\n\n" +
+			"1. Verifica que tienes seleccionado el **Residencial correcto** en la barra superior.\n" +
+			"2. En el menú lateral izquierdo, entra a **Gestión de Turnos ➔ Programación** (`/programacion`).\n" +
+			"3. Verás la **Matriz GRID mensual** por cada guardia.\n" +
+			"4. Haz clic en una celda para asignar o editar un turno (`TD` Turno Día, `TN` Turno Noche, `EX` Extra), o usa el botón **Programación Masiva** para asignar varios días de una vez (incluye validación antiduplicados).", true
+	}
+
+	if strings.Contains(p, "ronda") || strings.Contains(p, "qr") {
+		return "📖 **Guía: Control de Rondas y Puntos QR (`/puntos-qr` y `/rondas`)**\n\n" +
+			"1. Primero entra a **Operaciones ➔ Puntos de Control QR** (`/puntos-qr`) para registrar los puntos físicos del perímetro (puedes asociarlos a una Casa para ver el escudo verde si tiene contrato activo).\n" +
+			"2. Luego ve a **Operaciones ➔ Control de Rondas** (`/rondas`) para crear el circuito, seleccionar los puntos QR y asignarlo a un guardia con su horario.\n" +
+			"3. El guardia escaneará cada código desde la **App Móvil NCS365 Guarda ➔ Escanear QR**.", true
+	}
+
+	if strings.Contains(p, "visita") || strings.Contains(p, "garita") || strings.Contains(p, "acceso") || strings.Contains(p, "whatsapp") {
+		return "📖 **Guía: Control de Accesos y Garita (`/visitas`)**\n\n" +
+			"1. Entra a **Operaciones ➔ Control de Accesos** (`/visitas`) o desde la **App Móvil** en la sección Garita.\n" +
+			"2. Registra el nombre del visitante, placa (opcional) y casa destino.\n" +
+			"3. Usa el botón de **Notificar por WhatsApp (`wa.me`)** o Push Web para avisar al residente, y marca la salida (`FINALIZADA`) cuando el vehículo abandone el predio.", true
+	}
+
+	if strings.Contains(p, "flota") || strings.Contains(p, "360") || strings.Contains(p, "taller") || strings.Contains(p, "maquinaria") {
+		return "📖 **Guía: Control de Flota Pesada y Maquinaria 360 (`/flota`)**\n\n" +
+			"1. **Catálogo (`/flota/vehiculos`):** Registra primero los vehículos y maquinaria.\n" +
+			"2. **Solicitudes y FSM (`/flota`):** Crea la solicitud de movimiento. La unidad pasa por el ciclo de 10 estados (Asignada ➔ Taller ➔ Garita Salida ➔ En Tránsito ➔ Llegada ➔ Cierre).\n" +
+			"3. **Checklist 360 PWA (`/flota/inspeccion`):** El mecánico o guardia realiza la inspección táctil con captura fotográfica y lectura de horómetro/km.", true
+	}
+
+	if strings.Contains(p, "mapa") || strings.Contains(p, "gps") || strings.Contains(p, "ruta") || strings.Contains(p, "historial") {
+		return "📖 **Guía: Mapa Operativo y Rastreo GPS (`/map`)**\n\n" +
+			"1. Entra a **Centro de Mando ➔ Mapa Operativo** (`/map`).\n" +
+			"2. **Pestaña En Vivo:** Muestra en tiempo real a los guardias que están transmitiendo su baliza desde la app móvil.\n" +
+			"3. **Pestaña Historial:** Selecciona un guardia, fecha y rango de horas y pulsa **Buscar y Trazar Ruta**. El mapa segmenta automáticamente los tramos reales sin cruzar paredes ni edificios.", true
+	}
+
+	if strings.Contains(p, "residencial") || strings.Contains(p, "casa") || strings.Contains(p, "contrato") {
+		return "📖 **Guía: Gestión Residencial y Casas (`/residencial`)**\n\n" +
+			"1. Entra a **Operaciones ➔ Gestión Residencial** (`/residencial`).\n" +
+			"2. Crea primero el **Residencial base** definiendo su Latitud, Longitud y Zoom por defecto (esto centra el mapa operativo).\n" +
+			"3. Dentro del residencial seleccionado, registra las **Casas** e indica si cuentan con contrato de seguridad activo.", true
+	}
+
+	if strings.Contains(p, "app") || strings.Contains(p, "movil") || strings.Contains(p, "móvil") || strings.Contains(p, "apk") || strings.Contains(p, "celular") {
+		return "📖 **Guía: App Móvil Android (`NCS365 Guarda`)**\n\n" +
+			"• **Guardias:** Activa el switch **Patrullaje / GPS en Vivo** para transmitir en segundo plano (asegura en Ajustes de Android tener Ubicación en *Permitir todo el tiempo* y Batería en *Sin restricciones*). También tienes **Escanear QR**, **Visitas**, **Incidentes**, **Mis Turnos** y el botón rojo **SOS**.\n" +
+			"• **Administradores / Supervisores:** Al iniciar sesión se abre la consola móvil de **Hermes Sentinel** (alertas en vivo, chat IA y GPS). En el menú superior puedes cambiar a **Modo Guarda** si necesitas cubrir un puesto.", true
+	}
+
+	return "📖 **Guía Rápida de Módulos NCS365 (`https://app.ncsecurity.net`):**\n\n" +
+		"• **Centro de Mando (`/` y `/map`):** Resumen general, guardias GPS en vivo e historial de rutas.\n" +
+		"• **Hermes Sentinel (`/hermes`):** Alertas autónomas, configuración de umbrales (`⚙️`) y Chat IA.\n" +
+		"• **Operaciones:** Incidentes (`/incidentes`), Rondas (`/rondas`), Puntos QR (`/puntos-qr`), Garita (`/visitas`), Flota 360 (`/flota`) y Residenciales (`/residencial`).\n" +
+		"• **Turnos y Personal:** Matriz GRID (`/programacion`) y Usuarios/Roles (`/usuarios`).\n\n" +
+		"💡 *Pregúntame específicamente cómo hacer algo (ej. `¿cómo creo una ronda?`, `¿cómo programo turnos?` o `¿cómo uso la app móvil?`).*", true
 }
