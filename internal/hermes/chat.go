@@ -17,8 +17,8 @@ import (
 	"smart-residential-backend/internal/repository"
 )
 
-// ProcessChatMessage procesa una consulta en lenguaje natural usando Gemini o el motor analítico integral de Hermes
-func ProcessChatMessage(ctx context.Context, residencialID, mensaje string) (*model.HermesChatResponse, error) {
+// ProcessChatMessage procesa una consulta en lenguaje natural usando Gemini (con memoria multi-turno) o el motor analítico integral de Hermes
+func ProcessChatMessage(ctx context.Context, residencialID, mensaje string, historial []model.HermesChatHistoryItem, rutaActual string) (*model.HermesChatResponse, error) {
 	cleanMsg := strings.TrimSpace(mensaje)
 	if cleanMsg == "" {
 		return nil, fmt.Errorf("el mensaje no puede estar vacío")
@@ -39,9 +39,9 @@ func ProcessChatMessage(ctx context.Context, residencialID, mensaje string) (*mo
 		}
 	}
 
-	// Si hay API Key válida, consultar a Gemini (con fallback automático de modelo)
+	// Si hay API Key válida, consultar a Gemini (con fallback automático de modelo y memoria de conversación)
 	if apiKey != "" {
-		respGemini, err := consultarGemini(ctx, apiKey, cleanMsg, contexto, residencialID)
+		respGemini, err := consultarGemini(ctx, apiKey, cleanMsg, contexto, residencialID, historial, rutaActual)
 		if err == nil && respGemini != "" {
 			return &model.HermesChatResponse{
 				Respuesta: respGemini,
@@ -375,9 +375,14 @@ func recopilarContextoOperativo(ctx context.Context, residencialID string) (map[
 	return ctxMap, nil
 }
 
-// consultarGemini invoca modelos de Google Generative Language API con fallback automático
-func consultarGemini(ctx context.Context, apiKey, pregunta string, contexto map[string]interface{}, residencialID string) (string, error) {
+// consultarGemini invoca modelos de Google Generative Language API con fallback automático y memoria multi-turno
+func consultarGemini(ctx context.Context, apiKey, pregunta string, contexto map[string]interface{}, residencialID string, historial []model.HermesChatHistoryItem, rutaActual string) (string, error) {
 	ctxJSON, _ := json.MarshalIndent(contexto, "", "  ")
+
+	rutaInfo := ""
+	if strings.TrimSpace(rutaActual) != "" {
+		rutaInfo = fmt.Sprintf("\nPantalla actual desde donde consulta el usuario: %s (tenla en cuenta si pregunta cómo usar esta sección).\n", strings.TrimSpace(rutaActual))
+	}
 
 	systemInstruction := fmt.Sprintf(`
 Eres Hermes Sentinel, el agente controlador, administrador autónomo de seguridad y guía oficial del sistema New Century Security (NCS365).
@@ -385,7 +390,7 @@ Tu misión doble es:
 A) Asistir ejecutivamente con telemetría real a directores, administradores y supervisores de seguridad.
 B) Servir como Guía Interactiva y Manual de Uso paso a paso para cualquier usuario que pregunte cómo usar la plataforma Web o la App Móvil.
 
-Estás a cargo de la instalación: %s.
+Estás a cargo de la instalación: %s.%s
 
 Aquí tienes la radiografía y telemetría en tiempo real completa del sistema (guardias GPS, rondas, turnos, garita/visitas, flota pesada 360, casas, incidentes y alertas):
 %s
@@ -423,7 +428,55 @@ Reglas de respuesta:
 3. Si el usuario pregunta por datos operativos en vivo (guardias, rondas, flota, visitas, incidentes), basa tus números estrictamente en los hechos del contexto en tiempo real anterior; nunca inventes datos.
 4. Si el usuario pregunta cómo hacer algo en el sistema, dónde está una opción o pide ayuda de uso, guíalo paso a paso usando el Manual Operativo anterior con las rutas exactas y requisitos previos.
 5. Si hay incidentes críticos, botones de pánico SOS o guardias sin señal GPS en turno, ponlo como alerta prioritaria al inicio cuando corresponda.
-`, residencialID, string(ctxJSON))
+`, residencialID, rutaInfo, string(ctxJSON))
+
+	// Construir memoria multi-turno (últimos 10 mensajes válidos) + pregunta actual
+	var contents []map[string]interface{}
+	if len(historial) > 0 {
+		startIdx := 0
+		if len(historial) > 10 {
+			startIdx = len(historial) - 10
+		}
+		for _, item := range historial[startIdx:] {
+			txt := strings.TrimSpace(item.Text)
+			if txt == "" {
+				continue
+			}
+			role := "user"
+			if strings.EqualFold(item.Role, "model") || strings.EqualFold(item.Role, "hermes") || strings.EqualFold(item.Role, "assistant") {
+				role = "model"
+			}
+			// Evitar dos turnos seguidos con el mismo rol (requisito de Gemini API)
+			if len(contents) > 0 && contents[len(contents)-1]["role"] == role {
+				parts := contents[len(contents)-1]["parts"].([]map[string]string)
+				parts[0]["text"] = parts[0]["text"] + "\n" + txt
+				continue
+			}
+			// La conversación en Gemini debe iniciar con rol "user"
+			if len(contents) == 0 && role == "model" {
+				continue
+			}
+			contents = append(contents, map[string]interface{}{
+				"role": role,
+				"parts": []map[string]string{
+					{"text": txt},
+				},
+			})
+		}
+	}
+
+	// Agregar la pregunta actual al final (fusionando si el último turno quedó en "user")
+	if len(contents) > 0 && contents[len(contents)-1]["role"] == "user" {
+		parts := contents[len(contents)-1]["parts"].([]map[string]string)
+		parts[0]["text"] = parts[0]["text"] + "\n" + pregunta
+	} else {
+		contents = append(contents, map[string]interface{}{
+			"role": "user",
+			"parts": []map[string]string{
+				{"text": pregunta},
+			},
+		})
+	}
 
 	payload := map[string]interface{}{
 		"system_instruction": map[string]interface{}{
@@ -431,14 +484,7 @@ Reglas de respuesta:
 				{"text": systemInstruction},
 			},
 		},
-		"contents": []map[string]interface{}{
-			{
-				"role": "user",
-				"parts": []map[string]string{
-					{"text": pregunta},
-				},
-			},
-		},
+		"contents": contents,
 		"generationConfig": map[string]interface{}{
 			"temperature":     0.3,
 			"maxOutputTokens": 2500,

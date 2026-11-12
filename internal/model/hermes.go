@@ -52,9 +52,17 @@ type ResolverAlertaRequest struct {
 	AtendidoPor string `json:"atendido_por"` // Nombre o ID del supervisor
 }
 
+// HermesChatHistoryItem representa un turno previo de conversación para memoria multi-turno
+type HermesChatHistoryItem struct {
+	Role string `json:"role"` // "user" o "model" (también acepta "hermes")
+	Text string `json:"text"`
+}
+
 // HermesChatRequest define el mensaje del supervisor hacia Hermes
 type HermesChatRequest struct {
-	Mensaje string `json:"mensaje"`
+	Mensaje    string                  `json:"mensaje"`
+	Historial  []HermesChatHistoryItem `json:"historial,omitempty"`
+	RutaActual string                  `json:"ruta_actual,omitempty"`
 }
 
 // HermesChatResponse representa la respuesta analítica o generada por Gemini

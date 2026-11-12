@@ -169,7 +169,7 @@ func EnviarMensajeChatHermesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := hermes.ProcessChatMessage(r.Context(), residencialID, req.Mensaje)
+	resp, err := hermes.ProcessChatMessage(r.Context(), residencialID, req.Mensaje, req.Historial, req.RutaActual)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error procesando consulta con Hermes: %v", err), http.StatusInternalServerError)
 		return
